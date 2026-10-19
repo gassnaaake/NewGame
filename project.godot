@@ -11,8 +11,15 @@ config_version=5
 [application]
 
 config/name="NewGame"
+run/main_scene="res://Scenes/Lab.tscn"
 config/features=PackedStringArray("4.6", "Forward Plus")
 config/icon="res://icon.svg"
+
+[display]
+
+window/size/viewport_width=1440
+window/size/viewport_height=900
+window/stretch/mode="canvas_items"
 
 [dotnet]
 
@@ -20,8 +27,10 @@ project/assembly_name="NewGame"
 
 [physics]
 
+common/physics_ticks_per_second=120
 3d/physics_engine="Jolt Physics"
 
 [rendering]
 
 rendering_device/driver.windows="d3d12"
+environment/defaults/default_clear_color=Color(0.035, 0.055, 0.09, 1)

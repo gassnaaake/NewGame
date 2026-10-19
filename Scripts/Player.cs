@@ -1,0 +1,176 @@
+using Godot;
+using System.Collections.Generic;
+
+namespace PlanetLab;
+
+public partial class Player : CharacterBody2D
+{
+    [Export] public float GroundAcceleration { get; set; } = 650;
+    [Export] public float GroundDeceleration { get; set; } = 800;
+    [Export] public float MaxGroundSpeed { get; set; } = 200;
+    [Export] public float JumpSpeed { get; set; } = 290;
+    [Export] public float AirAcceleration { get; set; } = 65;
+    [Export] public float AirControlSpeed { get; set; } = 200;
+    [Export] public float MaxLaunchSpeed { get; set; } = 1100;
+    [Export] public float LaunchSpeedPerPixel { get; set; } = 4;
+    [Export] public float MinimumDragPixels { get; set; } = 6;
+    public const float Radius = 12;
+    public Planet? GravitySource { get; private set; }
+    public Planet? SupportPlanet { get; private set; }
+    public Vector2 Gravity { get; private set; }
+    public Vector2 SupportNormal { get; private set; } = Vector2.Up;
+    public bool Grounded { get; private set; }
+    public bool Aiming { get; private set; }
+    public Vector2 LaunchVelocity { get; private set; }
+    public bool TestMode { get; set; }
+    public float TestAxis { get; set; }
+    public bool TestJump { get; set; }
+    private readonly List<Planet> _planets = new();
+    private Vector2 _aimStart;
+    private Vector2 _visualUp = Vector2.Up;
+    private bool _skipGroundControl;
+
+    public override void _Ready()
+    {
+        foreach (Node node in GetTree().GetNodesInGroup("planets"))
+            _planets.Add((Planet)node);
+        FloorSnapLength = 0;
+        FloorStopOnSlope = false;
+        FloorConstantSpeed = false;
+        SafeMargin = 0.03f;
+        FloorMaxAngle = Mathf.DegToRad(75);
+    }
+
+    public override void _UnhandledInput(InputEvent input)
+    {
+        if (TestMode) return;
+        if (input is InputEventMouseButton mouse && mouse.ButtonIndex == MouseButton.Left)
+        {
+            if (mouse.Pressed) BeginAim(mouse.Position);
+            else if (Aiming) ReleaseAim(mouse.Position);
+        }
+        if (input is InputEventMouseMotion motion && Aiming) UpdateAim(motion.Position);
+        if (input is InputEventKey key && key.Pressed && key.Keycode == Key.Escape) CancelAim();
+    }
+
+    public bool BeginAim(Vector2 screenPosition)
+    {
+        if (!Grounded || Aiming) return false;
+        Aiming = true;
+        _aimStart = screenPosition;
+        LaunchVelocity = Vector2.Zero;
+        return true;
+    }
+
+    public void UpdateAim(Vector2 screenPosition)
+    {
+        if (!Aiming) return;
+        Vector2 drag = _aimStart - screenPosition;
+        LaunchVelocity = drag.Length() < MinimumDragPixels ? Vector2.Zero
+            : drag.LimitLength(MaxLaunchSpeed / Mathf.Max(0.001f, LaunchSpeedPerPixel)) * LaunchSpeedPerPixel;
+        QueueRedraw();
+    }
+
+    public void ReleaseAim(Vector2 screenPosition)
+    {
+        if (!Aiming) return;
+        UpdateAim(screenPosition);
+        Aiming = false;
+        if (!LaunchVelocity.IsZeroApprox())
+        {
+            Velocity = LaunchVelocity;
+            Grounded = false;
+            SupportPlanet = null;
+            _skipGroundControl = true;
+        }
+        QueueRedraw();
+    }
+
+    public void CancelAim() { Aiming = false; LaunchVelocity = Vector2.Zero; QueueRedraw(); }
+
+    public void ResetAt(Vector2 position, Vector2 velocity = default)
+    {
+        GlobalPosition = position;
+        Velocity = velocity;
+        Grounded = false;
+        SupportPlanet = null;
+        GravitySource = null;
+        Gravity = Vector2.Zero;
+        SupportNormal = Vector2.Up;
+        _visualUp = Vector2.Up;
+        _skipGroundControl = true;
+        TestAxis = 0;
+        TestJump = false;
+        CancelAim();
+    }
+
+    public override void _PhysicsProcess(double delta)
+    {
+        float dt = (float)delta;
+        GravitySource = GravitySelector.Select(_planets, GlobalPosition);
+        Gravity = GravitySource?.GravityAt(GlobalPosition) ?? Vector2.Zero;
+        if (Aiming) { QueueRedraw(); return; }
+
+        Vector2 up = Grounded ? SupportNormal : Gravity.IsZeroApprox() ? _visualUp : -Gravity.Normalized();
+        UpDirection = up;
+        Vector2 tangent = new(-up.Y, up.X);
+        float axis = TestMode ? TestAxis : (Input.IsPhysicalKeyPressed(Key.D) ? 1 : 0) - (Input.IsPhysicalKeyPressed(Key.A) ? 1 : 0);
+        bool jump = TestMode ? TestJump : Input.IsActionJustPressed("jump");
+        TestJump = false;
+
+        if (Grounded && !_skipGroundControl)
+        {
+            float speed = Velocity.Dot(tangent);
+            float target = axis * MaxGroundSpeed;
+            float next = Mathf.MoveToward(speed, target, (axis == 0 ? GroundDeceleration : GroundAcceleration) * dt);
+            Velocity += tangent * (next - speed);
+            if (jump)
+            {
+                Velocity = tangent * Velocity.Dot(tangent) + SupportNormal * JumpSpeed;
+                Grounded = false;
+                SupportPlanet = null;
+            }
+        }
+        else if (axis != 0)
+        {
+            float speed = Velocity.Dot(tangent);
+            // Air input cannot erase launch momentum or impose an airborne speed cap.
+            if (speed * axis < AirControlSpeed)
+                Velocity += tangent * axis * Mathf.Min(AirAcceleration * dt, AirControlSpeed - speed * axis);
+        }
+        _skipGroundControl = false;
+        Velocity += Gravity * dt;
+        MoveAndSlide();
+        Grounded = IsOnFloor();
+        SupportPlanet = null;
+        if (Grounded)
+        {
+            SupportNormal = GetFloorNormal().Normalized();
+            for (int i = 0; i < GetSlideCollisionCount(); i++)
+            {
+                KinematicCollision2D collision = GetSlideCollision(i);
+                if (collision.GetNormal().Dot(UpDirection) >= Mathf.Cos(FloorMaxAngle) && collision.GetCollider() is Planet p)
+                    SupportPlanet = p;
+            }
+        }
+        _visualUp = Grounded ? SupportNormal : Gravity.IsZeroApprox() ? _visualUp : -Gravity.Normalized();
+        QueueRedraw();
+    }
+
+    public override void _Draw()
+    {
+        DrawCircle(Vector2.Zero, Radius, new Color("f9d47a"));
+        Vector2 side = new(-_visualUp.Y, _visualUp.X);
+        DrawColoredPolygon(new[] { _visualUp * 23, _visualUp * 9 + side * 6, _visualUp * 9 - side * 6 }, Colors.White);
+        if (!Gravity.IsZeroApprox()) DrawLine(Vector2.Zero, Gravity.Normalized() * 48, new Color("ff8190"), 2, true);
+        if (Grounded) DrawLine(Vector2.Zero, SupportNormal * 38, new Color("7ef0bb"), 2, true);
+        if (Aiming && !LaunchVelocity.IsZeroApprox())
+        {
+            Vector2 end = LaunchVelocity / 4;
+            Vector2 direction = end.Normalized();
+            DrawLine(Vector2.Zero, end, Colors.White, 3, true);
+            DrawLine(end, end - direction.Rotated(0.5f) * 18, Colors.White, 3, true);
+            DrawLine(end, end - direction.Rotated(-0.5f) * 18, Colors.White, 3, true);
+        }
+    }
+}
