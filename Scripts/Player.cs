@@ -14,6 +14,7 @@ public partial class Player : CharacterBody2D
     [Export] public float MaxLaunchSpeed { get; set; } = 1100;
     [Export] public float LaunchSpeedPerPixel { get; set; } = 4;
     [Export] public float MinimumDragPixels { get; set; } = 6;
+    [Export(PropertyHint.Range, "0,0.5,0.01")] public float SupportProbeDistance { get; set; } = 0.2f;
     public const float Radius = 12;
     public Planet? GravitySource { get; private set; }
     public Planet? SupportPlanet { get; private set; }
@@ -29,6 +30,7 @@ public partial class Player : CharacterBody2D
     private Vector2 _aimStart;
     private Vector2 _visualUp = Vector2.Up;
     private bool _skipGroundControl;
+    private readonly KinematicCollision2D _supportProbe = new();
 
     public override void _Ready()
     {
@@ -37,7 +39,7 @@ public partial class Player : CharacterBody2D
         FloorSnapLength = 0;
         FloorStopOnSlope = false;
         FloorConstantSpeed = false;
-        SafeMargin = 0.03f;
+        SafeMargin = 0.08f;
         FloorMaxAngle = Mathf.DegToRad(75);
     }
 
@@ -151,6 +153,20 @@ public partial class Player : CharacterBody2D
                 KinematicCollision2D collision = GetSlideCollision(i);
                 if (collision.GetNormal().Dot(UpDirection) >= Mathf.Cos(FloorMaxAngle) && collision.GetCollider() is Planet p)
                     SupportPlanet = p;
+            }
+        }
+        else if (!Gravity.IsZeroApprox() && SupportProbeDistance > 0 &&
+                 TestMove(GlobalTransform, -UpDirection * SupportProbeDistance, _supportProbe, 0.01f))
+        {
+            // Observe subpixel support without moving/snapping the body. Never accept
+            // a separating contact (jump / tangent launch / high-speed detachment).
+            Vector2 normal = _supportProbe.GetNormal().Normalized();
+            if (normal.Dot(UpDirection) >= Mathf.Cos(FloorMaxAngle) &&
+                Velocity.Dot(normal) <= 0.5f && _supportProbe.GetCollider() is Planet planet)
+            {
+                Grounded = true;
+                SupportNormal = normal;
+                SupportPlanet = planet;
             }
         }
         _visualUp = Grounded ? SupportNormal : Gravity.IsZeroApprox() ? _visualUp : -Gravity.Normalized();

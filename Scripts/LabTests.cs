@@ -13,6 +13,8 @@ public partial class LabTests : Node
     private IEnumerator<int> _steps = null!;
     private int _wait;
     private int _checks;
+    private static bool _awaitingReload;
+    private static int _checksBeforeReload;
 
     public override void _Ready()
     {
@@ -21,7 +23,8 @@ public partial class LabTests : Node
         _sphere = GetParent().GetNode<Planet>("Sphere");
         _capsule = GetParent().GetNode<Planet>("Capsule");
         _player.TestMode = true;
-        _steps = Run().GetEnumerator();
+        _checks = _awaitingReload ? _checksBeforeReload : 0;
+        _steps = (_awaitingReload ? ValidateReload() : Run()).GetEnumerator();
     }
 
     public override void _PhysicsProcess(double delta)
@@ -89,6 +92,9 @@ public partial class LabTests : Node
             float rotation = 0;
             float previous = (_player.GlobalPosition - planet.Position).Angle();
             int groundedFrames = 0;
+            int airRun = 0;
+            int longestAirRun = 0;
+            float maxGap = 0;
             for (int i = 0; i < 2400; i++)
             {
                 yield return 1;
@@ -97,11 +103,15 @@ public partial class LabTests : Node
                 rotation += Mathf.Wrap(angle - previous, -Mathf.Pi, Mathf.Pi);
                 previous = angle;
                 if (_player.Grounded) groundedFrames++;
+                airRun = _player.Grounded ? 0 : airRun + 1;
+                longestAirRun = Math.Max(longestAirRun, airRun);
+                maxGap = Mathf.Max(maxGap, planet.Sample(_player.GlobalPosition).SignedDistance - Player.Radius);
             }
             _player.TestAxis = 0;
-            GD.Print($"WALK {planet.Name} dir={direction} turns={rotation / Mathf.Tau:F2} grounded={groundedFrames}/2400");
+            GD.Print($"WALK {planet.Name} dir={direction} turns={rotation / Mathf.Tau:F2} grounded={groundedFrames}/2400 maxAirRun={longestAirRun} maxGap={maxGap:F3}");
             Check(Mathf.Abs(rotation) > Mathf.Tau * 2, $"{planet.Name} direction {direction}: two complete laps");
             Check(groundedFrames > 2280, $"{planet.Name} direction {direction}: >95% grounded");
+            Check(longestAirRun <= 2 && maxGap < 0.5f, $"{planet.Name}: contact gaps stay under two ticks and half a pixel");
         }
 
         foreach (Planet planet in new[] { _sphere, _capsule })
@@ -177,5 +187,79 @@ public partial class LabTests : Node
         _player.ReleaseAim(new Vector2(-225, 0)); // 900 px/s tangent launch.
         yield return 15;
         Check(!_player.Grounded && _sphere.Sample(_player.GlobalPosition).SignedDistance > 20, "high-speed tangent motion naturally detaches");
+
+        float oldMaximum = _player.MaxGroundSpeed;
+        float oldAcceleration = _player.GroundAcceleration;
+        _player.ResetAt(_sphere.Position + Vector2.Up * 192.1f);
+        yield return 60;
+        _player.MaxGroundSpeed = 900;
+        _player.GroundAcceleration = 6000;
+        _player.TestAxis = 1;
+        bool walkedOff = false;
+        for (int frame = 0; frame < 90; frame++)
+        {
+            yield return 1;
+            CheckClear();
+            if (!_player.Grounded && _sphere.Sample(_player.GlobalPosition).SignedDistance > 20) { walkedOff = true; break; }
+        }
+        Check(walkedOff, "high-speed ground acceleration detaches without jumping or launching");
+        _player.MaxGroundSpeed = oldMaximum;
+        _player.GroundAcceleration = oldAcceleration;
+
+        _player.ResetAt(_sphere.Position + Vector2.Up * 192.1f);
+        yield return 60;
+        Vector2 cancelPosition = _player.GlobalPosition;
+        _player.BeginAim(Vector2.Zero);
+        _player.UpdateAim(new Vector2(100, 0));
+        _player.CancelAim();
+        Check(!_player.Aiming && _player.LaunchVelocity.IsZeroApprox(), "aim cancellation clears preview");
+        _player.BeginAim(Vector2.Zero);
+        _player.ReleaseAim(new Vector2(2, 0));
+        yield return 1;
+        Check(_player.Grounded && _player.GlobalPosition.DistanceTo(cancelPosition) < 0.2f, "small mouse drag does not launch");
+
+        // Continuous round trip: no reset/teleport between the outbound and return legs.
+        _player.ResetAt(_sphere.Position + Vector2.Right * 192.1f);
+        yield return 60;
+        foreach (Planet target in new[] { _capsule, _sphere })
+        {
+            Check(_player.BeginAim(Vector2.Zero), "continuous round trip can aim from actual landing");
+            Vector2 shot = (target.Position - _player.GlobalPosition).Normalized() * 650;
+            _player.ReleaseAim(-shot / _player.LaunchSpeedPerPixel);
+            bool arrived = false;
+            for (int frame = 0; frame < 1000; frame++)
+            {
+                yield return 1;
+                CheckClear();
+                if (_player.Grounded && _player.SupportPlanet == target) { arrived = true; break; }
+            }
+            Check(arrived, $"continuous round trip lands on {target.Name}");
+        }
+
+        // Exercise real keyboard dispatch and scene reload, not just ResetAt().
+        _checksBeforeReload = _checks;
+        _awaitingReload = true;
+        Input.ParseInputEvent(new InputEventKey { PhysicalKeycode = Key.R, Keycode = Key.R, Pressed = true });
+        yield return 120;
+        throw new Exception("R input did not reload the scene.");
+    }
+
+    private IEnumerable<int> ValidateReload()
+    {
+        Input.ParseInputEvent(new InputEventKey { PhysicalKeycode = Key.R, Keycode = Key.R, Pressed = false });
+        yield return 120;
+        Check(_player.Grounded && _player.SupportPlanet == _sphere, "R input reloads scene and restores sphere spawn");
+        Check(_player.GlobalPosition.DistanceTo(new Vector2(-400, -82)) < 0.5f, "reset restores initial location");
+        Check(!_player.Aiming && _player.Velocity.Length() < 0.1f, "reset clears aiming and travel velocity");
+        _player.TestMode = false;
+        GetViewport().PushInput(new InputEventMouseButton { ButtonIndex = MouseButton.Left, Pressed = true, Position = new Vector2(500, 400) }, true);
+        yield return 8;
+        Check(_player.Aiming, "mouse press reaches aim handler");
+        GetViewport().PushInput(new InputEventMouseMotion { Position = new Vector2(500, 500) }, true);
+        yield return 8;
+        Check(_player.LaunchVelocity.DistanceTo(new Vector2(0, -400)) < 0.01f, "mouse motion updates reverse drag preview");
+        GetViewport().PushInput(new InputEventMouseButton { ButtonIndex = MouseButton.Left, Pressed = false, Position = new Vector2(500, 500) }, true);
+        yield return 8;
+        Check(!_player.Aiming && !_player.Grounded && _player.Velocity.Y < -300, "mouse release launches through real input dispatch");
     }
 }

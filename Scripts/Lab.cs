@@ -10,10 +10,25 @@ public partial class Lab : Node2D
     {
         _player = GetNode<Player>("Player");
         _debug = GetNode<Label>("HUD/Debug");
-        InputMap.AddAction("jump");
-        InputMap.ActionAddEvent("jump", new InputEventKey { PhysicalKeycode = Key.Space });
+        if (!InputMap.HasAction("jump"))
+        {
+            InputMap.AddAction("jump");
+            InputMap.ActionAddEvent("jump", new InputEventKey { PhysicalKeycode = Key.Space });
+        }
         if (System.Array.Exists(OS.GetCmdlineUserArgs(), arg => arg == "--self-test"))
             CallDeferred(MethodName.AddChild, new LabTests());
+        if (System.Array.Exists(OS.GetCmdlineUserArgs(), arg => arg == "--capture"))
+            CapturePreview();
+    }
+
+    private async void CapturePreview()
+    {
+        for (int i = 0; i < 20; i++) await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
+        await ToSignal(RenderingServer.Singleton, RenderingServer.SignalName.FramePostDraw);
+        DirAccess.MakeDirRecursiveAbsolute("res://.godot/test-results");
+        Error result = GetViewport().GetTexture().GetImage().SavePng("res://.godot/test-results/preview.png");
+        GD.Print($"Preview capture: {result}");
+        GetTree().Quit(result == Error.Ok ? 0 : 1);
     }
 
     public override void _UnhandledInput(InputEvent input)
