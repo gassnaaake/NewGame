@@ -6,12 +6,14 @@ namespace PlanetLab;
 public partial class Player : CharacterBody2D
 {
     public enum MovementState { Normal, DownDash }
+
     [Export] public float DownDashSpeed { get; set; } = 1200;
     [Export] public Key DownDashKey { get; set; } = Key.J;
     public MovementState State { get; private set; }
     public Vector2 DashDirection { get; private set; }
     public string LastDashEndReason { get; private set; } = "None";
     private bool _dashRequested;
+
     [Export] public float GroundAcceleration { get; set; } = 650;
     [Export] public float GroundDeceleration { get; set; } = 800;
     [Export] public float MaxGroundSpeed { get; set; } = 200;
@@ -22,8 +24,28 @@ public partial class Player : CharacterBody2D
     [Export] public float LaunchSpeedPerPixel { get; set; } = 4;
     [Export] public float MinimumDragPixels { get; set; } = 6;
     [Export(PropertyHint.Range, "0,0.5,0.01")] public float SupportProbeDistance { get; set; } = 0.2f;
+
+    // Body rotation is visual only. The collision circle never rotates.
+    // Grounded and airborne responses are separate so landing can be crisp
+    // without making every airborne gravity change snap the character.
+    [Export(PropertyHint.Range, "0.1,60,0.1")] public float GroundedBodyRotationResponse { get; set; } = 24;
+    [Export(PropertyHint.Range, "0.1,60,0.1")] public float AirborneBodyRotationResponse { get; set; } = 12;
+    [Export(PropertyHint.Range, "0,20,0.1")] public float GravityDeadzone { get; set; } = 1;
+
     public const float Radius = 12;
-    public Planet? GravitySource { get; private set; }
+    public IGravitySource? GravitySource =>
+        _gravitySelection.Contributing.Count == 0 ? null : _gravitySelection.Contributing[0].Source;
+    public string GravitySourceLabel =>
+        _gravitySelection.Contributing.Count == 0
+            ? "None (inertia)"
+            : _gravitySelection.Contributing[0].Name;
+    public int CurrentGravityLayer => _gravitySelection.HighestPriorityLayer;
+    public Vector2 GravityTotal => _gravitySelection.Total;
+    public IReadOnlyList<GravityContribution> ActiveGravityRegions => _gravitySelection.Active;
+    public IReadOnlyList<GravityContribution> ContributingGravityRegions => _gravitySelection.Contributing;
+    public bool HasActiveGravity => _gravitySelection.HasActive;
+    public IReadOnlyList<IGravitySource> GravitySources => _gravitySources;
+
     public Planet? SupportPlanet { get; private set; }
     public PhysicsBody2D? SupportBody { get; private set; }
     private readonly HashSet<DashPlatform> _ignoredPlatforms = new();
@@ -38,21 +60,33 @@ public partial class Player : CharacterBody2D
     public bool TestJump { get; set; }
     public Vector2 BodyUp => _visualUp;
     public Vector2 BodyDown => -_visualUp;
-    private readonly List<Planet> _planets = new();
+
+    private readonly List<IGravitySource> _gravitySources = new();
+    private readonly GravitySelection _gravitySelection = new();
     private Vector2 _aimStart;
     private Vector2 _visualUp = Vector2.Up;
+    private PhysicsBody2D? _lastSupportBody;
     private bool _skipGroundControl;
     private readonly KinematicCollision2D _supportProbe = new();
 
     public override void _Ready()
     {
-        foreach (Node node in GetTree().GetNodesInGroup("planets"))
-            _planets.Add((Planet)node);
         FloorSnapLength = 0;
         FloorStopOnSlope = false;
         FloorConstantSpeed = false;
         SafeMargin = 0.08f;
         FloorMaxAngle = Mathf.DegToRad(75);
+        RefreshGravitySources();
+    }
+
+    // Regions and planets add themselves to "gravity_sources" from _EnterTree.
+    // Tests that create a region after _Ready must call this once.
+    public void RefreshGravitySources()
+    {
+        _gravitySources.Clear();
+        foreach (Node node in GetTree().GetNodesInGroup("gravity_sources"))
+            if (node is IGravitySource source)
+                _gravitySources.Add(source);
     }
 
     public override void _UnhandledInput(InputEvent input)
@@ -113,6 +147,7 @@ public partial class Player : CharacterBody2D
             if (IsInstanceValid(platform)) RemoveCollisionExceptionWith(platform);
         _ignoredPlatforms.Clear();
         SupportBody = null;
+        _lastSupportBody = null;
         DashDirection = Vector2.Zero;
         LastDashEndReason = "Reset";
         _dashRequested = false;
@@ -120,8 +155,8 @@ public partial class Player : CharacterBody2D
         Velocity = velocity;
         Grounded = false;
         SupportPlanet = null;
-        GravitySource = null;
         Gravity = Vector2.Zero;
+        _gravitySelection.Clear();
         SupportNormal = Vector2.Up;
         _visualUp = Vector2.Up;
         _skipGroundControl = true;
@@ -135,15 +170,30 @@ public partial class Player : CharacterBody2D
         float dt = (float)delta;
         bool hadSupport = Grounded;
         RestoreClearedPlatforms();
-        GravitySource = GravitySelector.Select(_planets, GlobalPosition);
-        Gravity = GravitySource?.GravityAt(GlobalPosition) ?? Vector2.Zero;
+
+        GravitySelector.Select(_gravitySources, GlobalPosition, _gravitySelection);
+        float deadzone = Mathf.Max(0, GravityDeadzone);
+        Gravity = _gravitySelection.Total.LengthSquared() > deadzone * deadzone
+            ? _gravitySelection.Total
+            : Vector2.Zero;
+        bool hasUsableGravity = !Gravity.IsZeroApprox();
+
         if (_dashRequested) { TryBeginDash(); _dashRequested = false; }
         if (State == MovementState.DownDash) { StepDash(dt); QueueRedraw(); return; }
         if (Aiming) { QueueRedraw(); return; }
 
-        Vector2 up = Grounded ? SupportNormal : Gravity.IsZeroApprox() ? _visualUp : -Gravity.Normalized();
-        UpDirection = up;
-        Vector2 controlUp = Grounded ? up : BodyUp;
+        Vector2 up;
+        if (Grounded && !SupportNormal.IsZeroApprox())
+            up = SupportNormal;
+        else if (hasUsableGravity)
+            up = -Gravity.Normalized();
+        else
+            up = _visualUp;
+        if (up.LengthSquared() < 0.000001f) up = Vector2.Up;
+        UpDirection = up.Normalized();
+
+        Vector2 controlUp = Grounded ? UpDirection : BodyUp;
+        if (controlUp.LengthSquared() < 0.000001f) controlUp = UpDirection;
         Vector2 tangent = new(-controlUp.Y, controlUp.X);
         float axis = TestMode ? TestAxis : (Input.IsPhysicalKeyPressed(Key.D) ? 1 : 0) - (Input.IsPhysicalKeyPressed(Key.A) ? 1 : 0);
         bool jump = TestMode ? TestJump : Input.IsActionJustPressed("jump");
@@ -171,11 +221,13 @@ public partial class Player : CharacterBody2D
                 Velocity += tangent * axis * Mathf.Min(AirAcceleration * dt, AirControlSpeed - speed * axis);
         }
         _skipGroundControl = false;
+
         Velocity += Gravity * dt;
         MoveAndSlide();
         Grounded = IsOnFloor();
         SupportPlanet = null;
         SupportBody = null;
+
         if (Grounded)
         {
             SupportNormal = GetFloorNormal().Normalized();
@@ -189,7 +241,7 @@ public partial class Player : CharacterBody2D
                 }
             }
         }
-        else if (!Gravity.IsZeroApprox() && SupportProbeDistance > 0 &&
+        else if (hasUsableGravity && SupportProbeDistance > 0 &&
                  TestMove(GlobalTransform, -UpDirection * SupportProbeDistance, _supportProbe, 0.01f))
         {
             // Observe subpixel support without moving/snapping the body. Never accept
@@ -204,18 +256,52 @@ public partial class Player : CharacterBody2D
                 SupportPlanet = body as Planet;
             }
         }
+
         // Touchdown consumes only the normal component. A support probe can report
         // contact just before MoveAndSlide has removed incoming normal velocity.
-        // Conversely curved slide contacts can leave a small outward component.
-        if (Grounded && !hadSupport) Velocity = Velocity.Slide(SupportNormal);
-        if (Grounded) _visualUp = SupportNormal;
+        // Project again when the support body changes, but not every frame on a
+        // curved capsule where a probe normal can fight the collision response.
+        bool supportChanged = Grounded && SupportBody != null && SupportBody != _lastSupportBody;
+        if (Grounded && (!hadSupport || supportChanged))
+            Velocity = Velocity.Slide(SupportNormal);
+        _lastSupportBody = Grounded ? SupportBody : null;
+
+        UpdateBodyOrientation(dt, hasUsableGravity);
         QueueRedraw();
+    }
+
+    private void UpdateBodyOrientation(float dt, bool hasUsableGravity)
+    {
+        if (State == MovementState.DownDash) return;
+
+        Vector2 target;
+        if (Grounded && !SupportNormal.IsZeroApprox())
+            target = SupportNormal;
+        else if (hasUsableGravity)
+            target = -Gravity.Normalized();
+        else
+            return; // Stable near-zero gravity: keep the last reliable orientation.
+
+        if (target.LengthSquared() < 0.000001f) return;
+        target = target.Normalized();
+        float response = Mathf.Max(0, Grounded ? GroundedBodyRotationResponse : AirborneBodyRotationResponse);
+        if (response <= 0)
+        {
+            _visualUp = target;
+            return;
+        }
+
+        float nextAngle = Mathf.LerpAngle(
+            _visualUp.Angle(),
+            target.Angle(),
+            1 - Mathf.Exp(-response * dt));
+        _visualUp = Vector2.FromAngle(nextAngle).Normalized();
     }
 
     public bool TryBeginDash()
     {
         if (Grounded || Aiming || State != MovementState.Normal) return false;
-        DashDirection = BodyDown.Normalized();
+        DashDirection = BodyDown.LengthSquared() > 0.000001f ? BodyDown.Normalized() : Vector2.Down;
         State = MovementState.DownDash;
         Velocity = DashDirection * Mathf.Max(1, DownDashSpeed);
         return true;
@@ -268,10 +354,10 @@ public partial class Player : CharacterBody2D
         // Dash impact stops the dash, rather than reflecting or turning its velocity.
         Velocity = Vector2.Zero;
         SupportNormal = hit.GetNormal().Normalized();
-        Grounded = !Gravity.IsZeroApprox() && SupportNormal.Dot(-Gravity.Normalized()) > Mathf.Cos(FloorMaxAngle);
+        Grounded = !Gravity.IsZeroApprox() &&
+                   SupportNormal.Dot(-Gravity.Normalized()) > Mathf.Cos(FloorMaxAngle);
         SupportPlanet = Grounded ? hit.GetCollider() as Planet : null;
         SupportBody = Grounded ? hit.GetCollider() as PhysicsBody2D : null;
-        if (Grounded) _visualUp = SupportNormal;
         _skipGroundControl = true;
     }
 

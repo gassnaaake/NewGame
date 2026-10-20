@@ -65,12 +65,13 @@ public partial class RouteTests : Node
         yield return 60;
         Check(_player.Grounded && _player.SupportBody == pad, "walk to pad center before takeoff");
         Capture("p002-pad");
-        Vector2 down = _player.BodyDown;
         _player.TestJump = true;
-        yield return 12;
+        yield return 1;
         Check(!_player.Grounded, "leave inclined pad by jumping");
-        Check(_player.TryBeginDash(), "activate down dash after inclined departure");
-        Check(Mathf.Abs(Mathf.RadToDeg(down.AngleTo(_player.Gravity))) > 30, "body-down route is distinct from gravity direction");
+        Vector2 dashDown = _player.BodyDown;
+        Check(_player.TryBeginDash(), "activate down dash immediately after inclined departure");
+        Check(_player.DashDirection.DistanceTo(dashDown) < 0.0001f, "dash locks current body down");
+        Check(Mathf.Abs(Mathf.RadToDeg(dashDown.AngleTo(_player.Gravity))) > 30, "body-down route is distinct from gravity direction");
         Vector2 origin = _player.Position;
         bool arrived = false, hadZeroGravity = false;
         for (int frame = 0; frame < 1200; frame++)
@@ -79,9 +80,9 @@ public partial class RouteTests : Node
             if (_player.GravitySource == null) hadZeroGravity = true;
             if (_player.State == Player.MovementState.DownDash)
             {
-                if (_player.BodyDown.DistanceTo(down) > 0.0001f)
+                if (_player.BodyDown.DistanceTo(dashDown) > 0.0001f)
                     throw new Exception("Gravity changed airborne body orientation.");
-                if (Mathf.Abs((_player.Position - origin).Cross(down)) > 0.5f)
+                if (Mathf.Abs((_player.Position - origin).Cross(dashDown)) > 0.5f)
                     throw new Exception("Dash deviated from its locked line.");
             }
             else

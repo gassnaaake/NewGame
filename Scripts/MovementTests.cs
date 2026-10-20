@@ -71,12 +71,15 @@ public partial class MovementTests : Node
         Vector2 heldUp = _player.BodyUp;
         _player.TestJump = true;
         yield return 8;
-        Check(!_player.Grounded && _player.BodyUp.DistanceTo(heldUp) < 0.0001f, "jump preserves departure body orientation");
+        Check(!_player.Grounded && _player.BodyUp.DistanceTo(heldUp) < 0.01f,
+            "jump leaves support with a continuous body orientation");
         // Diagnostic relocation only: sample a different gravity region without touching ground.
         _player.GlobalPosition = new Vector2(720, 70);
         _player.Velocity = Vector2.Zero;
         yield return 1;
-        Check(_player.GravitySource?.Name == "Capsule", "airborne gravity source changes");
-        Check(_player.BodyUp.DistanceTo(heldUp) < 0.0001f, "gravity switch cannot rotate airborne body");
+        Check(_player.GravitySourceLabel == "Capsule", "airborne gravity source changes");
+        Check(_player.BodyUp.DistanceTo(heldUp) > 0.01f, "gravity switch starts a continuous body turn");
+        yield return 30;
+        Check(_player.BodyUp.Dot(Vector2.Right) > 0.9f, "airborne body follows the new gravity direction");
     }
 }

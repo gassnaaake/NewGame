@@ -34,7 +34,8 @@ script = ExtResource("2")
 DisplayName = "Sphere"
 AttractionGeometry = SubResource("Sphere")
 GravityStrength = 550.0
-InfluenceRange = 500.0
+InfluenceRange = 450.0
+GravityLayer = 2
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Sphere"]
 shape = SubResource("Sphere")
@@ -46,7 +47,8 @@ script = ExtResource("2")
 DisplayName = "Capsule"
 AttractionGeometry = SubResource("Capsule")
 GravityStrength = 550.0
-InfluenceRange = 500.0
+InfluenceRange = 240.0
+GravityLayer = 1
 BodyColor = Color(0.22, 0.34, 0.31, 1)
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Capsule"]

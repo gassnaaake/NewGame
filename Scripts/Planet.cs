@@ -2,22 +2,56 @@ using Godot;
 
 namespace PlanetLab;
 
-public partial class Planet : StaticBody2D
+public partial class Planet : StaticBody2D, IGravitySource
 {
+    private int _gravityLayer = 1;
+    private float _gravityStrength = 550;
+
     [Export] public string DisplayName { get; set; } = "Planet";
     [Export] public Shape2D AttractionGeometry { get; set; } = new CircleShape2D { Radius = 180 };
-    [Export(PropertyHint.Range, "0,2000,10")] public float GravityStrength { get; set; } = 550;
+    [Export(PropertyHint.Range, "0,2000,10")]
+    public float GravityStrength
+    {
+        get => _gravityStrength;
+        set => _gravityStrength = Mathf.Max(0, value);
+    }
     // Influence region is the attraction shape expanded outwards by this distance.
     [Export(PropertyHint.Range, "0,2000,10")] public float InfluenceRange { get; set; } = 500;
     [Export] public Color BodyColor { get; set; } = new("31516c");
     [Export] public bool ShowInfluence { get; set; } = true;
+
+    [Export(PropertyHint.Range, "0,32,1")]
+    public int GravityLayer
+    {
+        get => _gravityLayer;
+        set => _gravityLayer = Mathf.Max(0, value);
+    }
+
+    public string GravityLabel => DisplayName;
     public Shape2D SolidGeometry => GetNode<CollisionShape2D>("CollisionShape2D").Shape;
+
+    public override void _EnterTree()
+    {
+        AddToGroup("planets");
+        AddToGroup("gravity_sources");
+    }
 
     public override void _Ready()
     {
-        AddToGroup("planets");
         if (!GlobalScale.IsEqualApprox(Vector2.One))
             GD.PushError($"{Name}: use shape dimensions, not node scale, for P-001 planets.");
+    }
+
+    public bool TryGetGravity(Vector2 worldPosition, out Vector2 gravity)
+    {
+        SurfaceSample sample = Sample(worldPosition);
+        if (sample.SignedDistance > InfluenceRange)
+        {
+            gravity = Vector2.Zero;
+            return false;
+        }
+        gravity = GravityAt(worldPosition);
+        return true;
     }
 
     public SurfaceSample Sample(Vector2 worldPosition)

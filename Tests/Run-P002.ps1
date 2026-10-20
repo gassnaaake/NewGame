@@ -9,9 +9,13 @@ try {
     & dotnet build NewGame.csproj -p:UseSharedCompilation=false
     if ($LASTEXITCODE -ne 0) { throw 'Build failed.' }
     New-Item -ItemType Directory -Force '.godot/test-results' | Out-Null
-    foreach ($suite in @('self-test', 'stage-a', 'stage-b', 'platform-tests', 'stage-c')) {
-        $scene = if ($suite -eq 'stage-c') { 'res://Scenes/RouteLab.tscn' } else { 'res://Scenes/Lab.tscn' }
-        $logPath = ".godot/test-results/p002-$suite-$RenderFps.log"
+    foreach ($suite in @('self-test', 'stage-a', 'stage-b', 'platform-tests', 'gravity-tests', 'stage-c')) {
+        $scene = switch ($suite) {
+            'stage-c' { 'res://Scenes/RouteLab.tscn' }
+            'gravity-tests' { 'res://Scenes/GravityLab.tscn' }
+            default { 'res://Scenes/Lab.tscn' }
+        }
+        $logPath = ".godot/test-results/p0022-$suite-$RenderFps.log"
         & $Godot --headless --path $projectDirectory $scene --fixed-fps $RenderFps -- "--$suite" 2>&1 |
             Tee-Object -FilePath $logPath
         if ($LASTEXITCODE -ne 0) { throw "$suite failed (see $logPath)." }

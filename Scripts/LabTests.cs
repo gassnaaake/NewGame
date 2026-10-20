@@ -70,7 +70,8 @@ public partial class LabTests : Node
         SurfaceSample b = SurfaceGeometry.Sample(cap, new Vector2(142, 150.01f));
         Check(a.Normal.DistanceTo(b.Normal) < 0.001f, "capsule tangent/arc normal continuity");
         Check(_capsule.Sample(new Vector2(400, -72)).Normal.DistanceTo(Vector2.Up) < 0.001f, "rotated capsule world-space normal");
-        Check(GravitySelector.Select(new[] { _sphere, _capsule }, new Vector2(0, -3000)) == null, "outside all influence regions");
+        GravitySelection outside = GravitySelector.Select(new[] { _sphere, _capsule }, new Vector2(0, -3000));
+        Check(!outside.HasActive && outside.Total == Vector2.Zero, "outside all influence regions");
         Vector2 savedPosition = _player.GlobalPosition;
         Vector2 savedVelocity = _player.Velocity;
         GravitySelector.Select(new[] { _sphere, _capsule }, _capsule.Position + Vector2.Up * 160);
@@ -164,7 +165,7 @@ public partial class LabTests : Node
             Check(_player.Velocity.DistanceTo(launch) < 0.01f, "release sets repeatable initial velocity");
             bool arrived = false;
             int switches = 0;
-            Planet? last = source;
+            IGravitySource? last = source;
             for (int frame = 0; frame < 1200; frame++)
             {
                 yield return 1;
@@ -177,8 +178,13 @@ public partial class LabTests : Node
             Check(switches == 1, "travel switches gravity once without chatter");
             _player.TestAxis = 1;
             Vector2 landingPosition = _player.GlobalPosition;
-            yield return 120;
-            Check(_player.GlobalPosition.DistanceTo(landingPosition) > 50, "movement remains available after landing");
+            float maxMovement = 0;
+            for (int postFrame = 0; postFrame < 120; postFrame++)
+            {
+                yield return 1;
+                maxMovement = Mathf.Max(maxMovement, _player.GlobalPosition.DistanceTo(landingPosition));
+            }
+            Check(maxMovement > 50, "movement remains available after landing");
         }
 
         _player.ResetAt(_sphere.Position + Vector2.Up * 192.1f);

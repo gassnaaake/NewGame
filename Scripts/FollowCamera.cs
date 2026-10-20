@@ -5,7 +5,7 @@ namespace PlanetLab;
 public partial class FollowCamera : Camera2D
 {
     [Export] public NodePath TargetPath { get; set; } = new("../Player");
-    [Export(PropertyHint.Range, "0.1,20,0.1")] public float RotationResponse { get; set; } = 7;
+    [Export(PropertyHint.Range, "0.1,30,0.1")] public float RotationResponse { get; set; } = 5;
     [Export(PropertyHint.Range, "0.2,1.5,0.05")] public float ViewZoom { get; set; } = 0.65f;
     private Player _target = null!;
     public override void _Ready()
@@ -18,7 +18,12 @@ public partial class FollowCamera : Camera2D
     public override void _Process(double delta)
     {
         GlobalPosition = _target.GlobalPosition;
-        float angle = Vector2.Up.AngleTo(_target.BodyUp);
+        Vector2 bodyUp = _target.BodyUp;
+        if (bodyUp.LengthSquared() < 0.000001f ||
+            !float.IsFinite(bodyUp.X) || !float.IsFinite(bodyUp.Y))
+            return;
+
+        float angle = Vector2.Up.AngleTo(bodyUp.Normalized());
         GlobalRotation = Mathf.LerpAngle(GlobalRotation, angle, 1 - Mathf.Exp(-RotationResponse * (float)delta));
         Zoom = Vector2.One * ViewZoom;
     }
