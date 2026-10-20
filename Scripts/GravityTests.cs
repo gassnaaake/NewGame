@@ -79,6 +79,22 @@ public partial class GravityTests : Node
             "gap recomputes the current planet source instead of retaining A");
         Check(inGap.Total.Length() > 1, "gap has finite non-zero planet gravity");
 
+        var planetLayerBoost = new GravityRegion
+        {
+            Name = "PlanetLayerBoost", DisplayName = "L1 boost", GravityLayer = 1,
+            Size = new Vector2(300, 300), Direction = Vector2.Down, GravityStrength = 100,
+            Position = new Vector2(-375, -170)
+        };
+        GetParent().AddChild(planetLayerBoost);
+        _player.RefreshGravitySources();
+        GravitySelection planetPlusZone = GravitySelector.Select(_player.GravitySources, new Vector2(-375, -170));
+        Check(planetPlusZone.Contributing.Count == 2, "planet and fixed region can share a layer");
+        Check(planetPlusZone.Total.DistanceTo(inGap.Total + Vector2.Down * 100) < 0.1f,
+            "planet and fixed region same-layer vectors add");
+        planetLayerBoost.QueueFree();
+        _player.RefreshGravitySources();
+        yield return 1;
+
         GravitySelection atC = GravitySelector.Select(_player.GravitySources, new Vector2(-220, -170));
         Check(atC.HighestPriorityLayer == 0, "overlap C selects layer 0");
         Check(atC.Contributing.Count == 2, "both same-layer C regions contribute");
