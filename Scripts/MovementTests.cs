@@ -54,11 +54,16 @@ public partial class MovementTests : Node
                     landed = true;
                     float outward = _player.Velocity.Dot(_player.SupportNormal);
                     GD.Print($"LAND {name}/{i} incoming={before} outgoing={_player.Velocity} outward={outward:F3} tangent={_player.Velocity.Slide(_player.SupportNormal).Length():F3}");
-                    if (!probe) Check(Mathf.Abs(outward) < 0.1f, $"{name}/{i}: landing normal speed removed");
+                    if (!probe)
+                    {
+                        Check(Mathf.Abs(outward) < 0.1f, $"{name}/{i}: landing normal speed removed");
+                        Check(_player.Velocity.Slide(_player.SupportNormal).Length() > 100, $"{name}/{i}: landing retains tangent momentum");
+                    }
                     break;
                 }
                 Check(landed, $"{name}/{i}: oblique landing");
                 yield return 120;
+                if (!probe) Check(_player.Grounded && _player.Velocity.Length() < 5, $"{name}/{i}: settles without rebound");
             }
         }
         _player.ResetAt(new Vector2(-400, -82.1f));

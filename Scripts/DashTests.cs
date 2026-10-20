@@ -67,5 +67,14 @@ public partial class DashTests : Node
         Check(_player.LastDashEndReason.Contains("ThinBlocker"), "dash end reason names blocker");
         blocker.QueueFree();
         _player.DownDashSpeed = 1200;
+        _player.ResetAt(new Vector2(-400, -82.1f));
+        yield return 60;
+        _player.TestJump = true;
+        yield return 20;
+        _player.TestMode = false;
+        Input.ParseInputEvent(new InputEventKey { PhysicalKeycode = Key.J, Keycode = Key.J, Pressed = true });
+        yield return 1;
+        Check(_player.State == Player.MovementState.DownDash, "J key input starts dash");
+        Input.ParseInputEvent(new InputEventKey { PhysicalKeycode = Key.J, Keycode = Key.J, Pressed = false });
     }
 }

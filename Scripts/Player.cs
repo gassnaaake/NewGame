@@ -25,6 +25,9 @@ public partial class Player : CharacterBody2D
     public const float Radius = 12;
     public Planet? GravitySource { get; private set; }
     public Planet? SupportPlanet { get; private set; }
+    public PhysicsBody2D? SupportBody { get; private set; }
+    private readonly HashSet<DashPlatform> _ignoredPlatforms = new();
+    public int PendingCollisionRestores => _ignoredPlatforms.Count;
     public Vector2 Gravity { get; private set; }
     public Vector2 SupportNormal { get; private set; } = Vector2.Up;
     public bool Grounded { get; private set; }
@@ -95,6 +98,7 @@ public partial class Player : CharacterBody2D
             Velocity = LaunchVelocity;
             Grounded = false;
             SupportPlanet = null;
+            SupportBody = null;
             _skipGroundControl = true;
         }
         QueueRedraw();
@@ -105,6 +109,10 @@ public partial class Player : CharacterBody2D
     public void ResetAt(Vector2 position, Vector2 velocity = default)
     {
         State = MovementState.Normal;
+        foreach (DashPlatform platform in _ignoredPlatforms)
+            if (IsInstanceValid(platform)) RemoveCollisionExceptionWith(platform);
+        _ignoredPlatforms.Clear();
+        SupportBody = null;
         DashDirection = Vector2.Zero;
         LastDashEndReason = "Reset";
         _dashRequested = false;
@@ -126,6 +134,7 @@ public partial class Player : CharacterBody2D
     {
         float dt = (float)delta;
         bool hadSupport = Grounded;
+        RestoreClearedPlatforms();
         GravitySource = GravitySelector.Select(_planets, GlobalPosition);
         Gravity = GravitySource?.GravityAt(GlobalPosition) ?? Vector2.Zero;
         if (_dashRequested) { TryBeginDash(); _dashRequested = false; }
@@ -134,7 +143,8 @@ public partial class Player : CharacterBody2D
 
         Vector2 up = Grounded ? SupportNormal : Gravity.IsZeroApprox() ? _visualUp : -Gravity.Normalized();
         UpDirection = up;
-        Vector2 tangent = new(-up.Y, up.X);
+        Vector2 controlUp = Grounded ? up : BodyUp;
+        Vector2 tangent = new(-controlUp.Y, controlUp.X);
         float axis = TestMode ? TestAxis : (Input.IsPhysicalKeyPressed(Key.D) ? 1 : 0) - (Input.IsPhysicalKeyPressed(Key.A) ? 1 : 0);
         bool jump = TestMode ? TestJump : Input.IsActionJustPressed("jump");
         TestJump = false;
@@ -150,6 +160,7 @@ public partial class Player : CharacterBody2D
                 Velocity = tangent * Velocity.Dot(tangent) + SupportNormal * JumpSpeed;
                 Grounded = false;
                 SupportPlanet = null;
+                SupportBody = null;
             }
         }
         else if (axis != 0)
@@ -164,14 +175,18 @@ public partial class Player : CharacterBody2D
         MoveAndSlide();
         Grounded = IsOnFloor();
         SupportPlanet = null;
+        SupportBody = null;
         if (Grounded)
         {
             SupportNormal = GetFloorNormal().Normalized();
             for (int i = 0; i < GetSlideCollisionCount(); i++)
             {
                 KinematicCollision2D collision = GetSlideCollision(i);
-                if (collision.GetNormal().Dot(UpDirection) >= Mathf.Cos(FloorMaxAngle) && collision.GetCollider() is Planet p)
-                    SupportPlanet = p;
+                if (collision.GetNormal().Dot(UpDirection) >= Mathf.Cos(FloorMaxAngle) && collision.GetCollider() is PhysicsBody2D body)
+                {
+                    SupportBody = body;
+                    SupportPlanet = body as Planet;
+                }
             }
         }
         else if (!Gravity.IsZeroApprox() && SupportProbeDistance > 0 &&
@@ -181,11 +196,12 @@ public partial class Player : CharacterBody2D
             // a separating contact (jump / tangent launch / high-speed detachment).
             Vector2 normal = _supportProbe.GetNormal().Normalized();
             if (normal.Dot(UpDirection) >= Mathf.Cos(FloorMaxAngle) &&
-                Velocity.Dot(normal) <= 0.5f && _supportProbe.GetCollider() is Planet planet)
+                Velocity.Dot(normal) <= 0.5f && _supportProbe.GetCollider() is PhysicsBody2D body)
             {
                 Grounded = true;
                 SupportNormal = normal;
-                SupportPlanet = planet;
+                SupportBody = body;
+                SupportPlanet = body as Planet;
             }
         }
         // Touchdown consumes only the normal component. A support probe can report
@@ -208,9 +224,41 @@ public partial class Player : CharacterBody2D
     private void StepDash(float dt)
     {
         Velocity = DashDirection * Mathf.Max(1, DownDashSpeed);
-        KinematicCollision2D? hit = MoveAndCollide(Velocity * dt);
-        if (hit == null) return;
-        EndDash(hit);
+        Vector2 remaining = Velocity * dt;
+        while (!remaining.IsZeroApprox())
+        {
+            KinematicCollision2D? hit = MoveAndCollide(remaining);
+            if (hit == null) return;
+            if (hit.GetCollider() is DashPlatform platform && platform.Kind != DashPlatform.PlatformKind.Solid)
+            {
+                // Per-player exception: other normal bodies still collide with pass platforms.
+                if (!_ignoredPlatforms.Add(platform))
+                {
+                    EndDash(hit);
+                    LastDashEndReason = "Repeated collision (safety stop)";
+                    return;
+                }
+                AddCollisionExceptionWith(platform);
+                if (platform.Kind == DashPlatform.PlatformKind.Breakable) platform.Break();
+                remaining = hit.GetRemainder();
+                continue;
+            }
+            EndDash(hit);
+            return;
+        }
+    }
+
+    private void RestoreClearedPlatforms()
+    {
+        foreach (DashPlatform platform in new List<DashPlatform>(_ignoredPlatforms))
+        {
+            if (!IsInstanceValid(platform)) { _ignoredPlatforms.Remove(platform); continue; }
+            // This also runs after a dash hits a solid inside an overlapping pass
+            // platform: don't re-enable contact until the whole character has exited.
+            if (!platform.Destroyed && platform.OverlapsPlayer(GlobalPosition, Radius)) continue;
+            RemoveCollisionExceptionWith(platform);
+            _ignoredPlatforms.Remove(platform);
+        }
     }
 
     private void EndDash(KinematicCollision2D hit)
@@ -222,6 +270,7 @@ public partial class Player : CharacterBody2D
         SupportNormal = hit.GetNormal().Normalized();
         Grounded = !Gravity.IsZeroApprox() && SupportNormal.Dot(-Gravity.Normalized()) > Mathf.Cos(FloorMaxAngle);
         SupportPlanet = Grounded ? hit.GetCollider() as Planet : null;
+        SupportBody = Grounded ? hit.GetCollider() as PhysicsBody2D : null;
         if (Grounded) _visualUp = SupportNormal;
         _skipGroundControl = true;
     }
