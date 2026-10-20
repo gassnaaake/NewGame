@@ -5,6 +5,13 @@ namespace PlanetLab;
 
 public partial class Player : CharacterBody2D
 {
+    public enum MovementState { Normal, DownDash }
+    [Export] public float DownDashSpeed { get; set; } = 1200;
+    [Export] public Key DownDashKey { get; set; } = Key.J;
+    public MovementState State { get; private set; }
+    public Vector2 DashDirection { get; private set; }
+    public string LastDashEndReason { get; private set; } = "None";
+    private bool _dashRequested;
     [Export] public float GroundAcceleration { get; set; } = 650;
     [Export] public float GroundDeceleration { get; set; } = 800;
     [Export] public float MaxGroundSpeed { get; set; } = 200;
@@ -48,6 +55,8 @@ public partial class Player : CharacterBody2D
     public override void _UnhandledInput(InputEvent input)
     {
         if (TestMode) return;
+        if (input is InputEventKey dashKey && dashKey.Pressed && !dashKey.Echo && dashKey.PhysicalKeycode == DownDashKey)
+            _dashRequested = true;
         if (input is InputEventMouseButton mouse && mouse.ButtonIndex == MouseButton.Left)
         {
             if (mouse.Pressed) BeginAim(mouse.Position);
@@ -59,7 +68,7 @@ public partial class Player : CharacterBody2D
 
     public bool BeginAim(Vector2 screenPosition)
     {
-        if (!Grounded || Aiming) return false;
+        if (!Grounded || Aiming || State != MovementState.Normal) return false;
         Aiming = true;
         _aimStart = screenPosition;
         LaunchVelocity = Vector2.Zero;
@@ -95,6 +104,10 @@ public partial class Player : CharacterBody2D
 
     public void ResetAt(Vector2 position, Vector2 velocity = default)
     {
+        State = MovementState.Normal;
+        DashDirection = Vector2.Zero;
+        LastDashEndReason = "Reset";
+        _dashRequested = false;
         GlobalPosition = position;
         Velocity = velocity;
         Grounded = false;
@@ -115,6 +128,8 @@ public partial class Player : CharacterBody2D
         bool hadSupport = Grounded;
         GravitySource = GravitySelector.Select(_planets, GlobalPosition);
         Gravity = GravitySource?.GravityAt(GlobalPosition) ?? Vector2.Zero;
+        if (_dashRequested) { TryBeginDash(); _dashRequested = false; }
+        if (State == MovementState.DownDash) { StepDash(dt); QueueRedraw(); return; }
         if (Aiming) { QueueRedraw(); return; }
 
         Vector2 up = Grounded ? SupportNormal : Gravity.IsZeroApprox() ? _visualUp : -Gravity.Normalized();
@@ -179,6 +194,36 @@ public partial class Player : CharacterBody2D
         if (Grounded && !hadSupport) Velocity = Velocity.Slide(SupportNormal);
         if (Grounded) _visualUp = SupportNormal;
         QueueRedraw();
+    }
+
+    public bool TryBeginDash()
+    {
+        if (Grounded || Aiming || State != MovementState.Normal) return false;
+        DashDirection = BodyDown.Normalized();
+        State = MovementState.DownDash;
+        Velocity = DashDirection * Mathf.Max(1, DownDashSpeed);
+        return true;
+    }
+
+    private void StepDash(float dt)
+    {
+        Velocity = DashDirection * Mathf.Max(1, DownDashSpeed);
+        KinematicCollision2D? hit = MoveAndCollide(Velocity * dt);
+        if (hit == null) return;
+        EndDash(hit);
+    }
+
+    private void EndDash(KinematicCollision2D hit)
+    {
+        State = MovementState.Normal;
+        LastDashEndReason = $"Blocked by {(hit.GetCollider() as Node)?.Name}";
+        // Dash impact stops the dash, rather than reflecting or turning its velocity.
+        Velocity = Vector2.Zero;
+        SupportNormal = hit.GetNormal().Normalized();
+        Grounded = !Gravity.IsZeroApprox() && SupportNormal.Dot(-Gravity.Normalized()) > Mathf.Cos(FloorMaxAngle);
+        SupportPlanet = Grounded ? hit.GetCollider() as Planet : null;
+        if (Grounded) _visualUp = SupportNormal;
+        _skipGroundControl = true;
     }
 
     public override void _Draw()

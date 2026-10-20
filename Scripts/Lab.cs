@@ -19,6 +19,8 @@ public partial class Lab : Node2D
             CallDeferred(MethodName.AddChild, new LabTests());
         if (System.Array.Exists(OS.GetCmdlineUserArgs(), arg => arg.StartsWith("--stage-a")))
             CallDeferred(MethodName.AddChild, new MovementTests());
+        if (System.Array.Exists(OS.GetCmdlineUserArgs(), arg => arg == "--stage-b"))
+            CallDeferred(MethodName.AddChild, new DashTests());
         if (System.Array.Exists(OS.GetCmdlineUserArgs(), arg => arg == "--capture"))
             CapturePreview();
     }
@@ -42,7 +44,10 @@ public partial class Lab : Node2D
     public override void _Process(double delta)
     {
         Vector2 g = _player.Gravity;
-        _debug.Text = $"PLANET LAB / P-001\n" +
+        float angle = g.IsZeroApprox() ? 0 : Mathf.RadToDeg(Mathf.Abs(_player.BodyDown.AngleTo(g)));
+        _debug.Text = $"PLANET LAB / P-002\n" +
+            $"State: {_player.State}  Body down: {_player.BodyDown:F2}  Gravity angle: {(g.IsZeroApprox() ? "--" : angle.ToString("F1"))}\n" +
+            $"Dash: {_player.DashDirection:F2}  speed {(_player.State == Player.MovementState.DownDash ? _player.Velocity.Length() : 0):F0}  End: {_player.LastDashEndReason}\n" +
             $"Gravity source: {_player.GravitySource?.DisplayName ?? "None (inertia)"}\n" +
             $"Gravity: {g.Length():F1}   direction {g.Normalized():F2}\n" +
             $"Velocity: {_player.Velocity:F1}   speed {_player.Velocity.Length():F1}\n" +
@@ -50,6 +55,6 @@ public partial class Lab : Node2D
             $"Support normal: {(_player.Grounded ? _player.SupportNormal.ToString("F2") : "-- (airborne)")}\n" +
             $"Launch: {_player.LaunchVelocity.Length():F0}/{_player.MaxLaunchSpeed:F0}   direction {_player.LaunchVelocity.Normalized():F2}\n" +
             (_player.Aiming ? "AIMING — motion paused / release to launch / Esc cancel" : "A/D move  |  Space jump  |  hold LMB + drag backward to launch (ground only)") +
-            "\nR reset  |  red: gravity  green: support  white: launch  |  outside view? R to reset";
+            "\nJ down-dash (airborne)  |  R reset  |  red: gravity  green: support  white: launch";
     }
 }
