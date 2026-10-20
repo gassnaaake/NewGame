@@ -241,6 +241,10 @@ public partial class GravityTests : Node
         _player.ResetAt(new Vector2(0, -2000));
         yield return 1;
         Check(_player.Gravity.DistanceTo(Vector2.Up * 550) < 0.1f, "flip region supplies upward gravity");
+        Check(_player.UpDirection.Dot(Vector2.Down) > 0.99f,
+            "physical up follows new gravity immediately");
+        Check(_player.BodyUp.Dot(Vector2.Down) < 0.5f,
+            "visual body transitions separately from physical up");
         float bodyStart = Mathf.Abs(Vector2.Up.AngleTo(_player.BodyUp));
         float cameraStart = Mathf.Abs(GetViewport().GetCamera2D()?.GlobalRotation ?? 0);
         yield return 6;
