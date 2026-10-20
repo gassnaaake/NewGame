@@ -26,6 +26,8 @@ public partial class Player : CharacterBody2D
     public bool TestMode { get; set; }
     public float TestAxis { get; set; }
     public bool TestJump { get; set; }
+    public Vector2 BodyUp => _visualUp;
+    public Vector2 BodyDown => -_visualUp;
     private readonly List<Planet> _planets = new();
     private Vector2 _aimStart;
     private Vector2 _visualUp = Vector2.Up;
@@ -68,8 +70,9 @@ public partial class Player : CharacterBody2D
     {
         if (!Aiming) return;
         Vector2 drag = _aimStart - screenPosition;
+        float cameraAngle = GetViewport().GetCamera2D()?.GlobalRotation ?? 0;
         LaunchVelocity = drag.Length() < MinimumDragPixels ? Vector2.Zero
-            : drag.LimitLength(MaxLaunchSpeed / Mathf.Max(0.001f, LaunchSpeedPerPixel)) * LaunchSpeedPerPixel;
+            : drag.Rotated(cameraAngle).LimitLength(MaxLaunchSpeed / Mathf.Max(0.001f, LaunchSpeedPerPixel)) * LaunchSpeedPerPixel;
         QueueRedraw();
     }
 
@@ -109,6 +112,7 @@ public partial class Player : CharacterBody2D
     public override void _PhysicsProcess(double delta)
     {
         float dt = (float)delta;
+        bool hadSupport = Grounded;
         GravitySource = GravitySelector.Select(_planets, GlobalPosition);
         Gravity = GravitySource?.GravityAt(GlobalPosition) ?? Vector2.Zero;
         if (Aiming) { QueueRedraw(); return; }
@@ -169,7 +173,11 @@ public partial class Player : CharacterBody2D
                 SupportPlanet = planet;
             }
         }
-        _visualUp = Grounded ? SupportNormal : Gravity.IsZeroApprox() ? _visualUp : -Gravity.Normalized();
+        // Touchdown consumes only the normal component. A support probe can report
+        // contact just before MoveAndSlide has removed incoming normal velocity.
+        // Conversely curved slide contacts can leave a small outward component.
+        if (Grounded && !hadSupport) Velocity = Velocity.Slide(SupportNormal);
+        if (Grounded) _visualUp = SupportNormal;
         QueueRedraw();
     }
 

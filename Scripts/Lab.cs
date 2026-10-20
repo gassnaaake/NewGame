@@ -17,6 +17,8 @@ public partial class Lab : Node2D
         }
         if (System.Array.Exists(OS.GetCmdlineUserArgs(), arg => arg == "--self-test"))
             CallDeferred(MethodName.AddChild, new LabTests());
+        if (System.Array.Exists(OS.GetCmdlineUserArgs(), arg => arg.StartsWith("--stage-a")))
+            CallDeferred(MethodName.AddChild, new MovementTests());
         if (System.Array.Exists(OS.GetCmdlineUserArgs(), arg => arg == "--capture"))
             CapturePreview();
     }

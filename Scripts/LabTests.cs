@@ -160,7 +160,7 @@ public partial class LabTests : Node
             yield return 120;
             Check(_player.GlobalPosition == aimPosition && _player.Velocity == aimVelocity, "aiming freezes position and velocity");
             Vector2 launch = new(returning ? -650 : 650, -100);
-            _player.ReleaseAim(new Vector2(500, 400) - launch / _player.LaunchSpeedPerPixel);
+            _player.ReleaseAim(new Vector2(500, 400) - launch.Rotated(-GetViewport().GetCamera2D().GlobalRotation) / _player.LaunchSpeedPerPixel);
             Check(_player.Velocity.DistanceTo(launch) < 0.01f, "release sets repeatable initial velocity");
             bool arrived = false;
             int switches = 0;
@@ -184,7 +184,7 @@ public partial class LabTests : Node
         _player.ResetAt(_sphere.Position + Vector2.Up * 192.1f);
         yield return 60;
         _player.BeginAim(Vector2.Zero);
-        _player.ReleaseAim(new Vector2(-225, 0)); // 900 px/s tangent launch.
+        _player.ReleaseAim(new Vector2(-225, 0).Rotated(-GetViewport().GetCamera2D().GlobalRotation)); // 900 px/s tangent launch.
         yield return 15;
         Check(!_player.Grounded && _sphere.Sample(_player.GlobalPosition).SignedDistance > 20, "high-speed tangent motion naturally detaches");
 
@@ -225,7 +225,7 @@ public partial class LabTests : Node
         {
             Check(_player.BeginAim(Vector2.Zero), "continuous round trip can aim from actual landing");
             Vector2 shot = (target.Position - _player.GlobalPosition).Normalized() * 650;
-            _player.ReleaseAim(-shot / _player.LaunchSpeedPerPixel);
+            _player.ReleaseAim(-shot.Rotated(-GetViewport().GetCamera2D().GlobalRotation) / _player.LaunchSpeedPerPixel);
             bool arrived = false;
             for (int frame = 0; frame < 1000; frame++)
             {
@@ -263,3 +263,4 @@ public partial class LabTests : Node
         Check(!_player.Aiming && !_player.Grounded && _player.Velocity.Y < -300, "mouse release launches through real input dispatch");
     }
 }
+

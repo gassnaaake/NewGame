@@ -1,0 +1,25 @@
+using Godot;
+
+namespace PlanetLab;
+
+public partial class FollowCamera : Camera2D
+{
+    [Export] public NodePath TargetPath { get; set; } = new("../Player");
+    [Export(PropertyHint.Range, "0.1,20,0.1")] public float RotationResponse { get; set; } = 7;
+    [Export(PropertyHint.Range, "0.2,1.5,0.05")] public float ViewZoom { get; set; } = 0.65f;
+    private Player _target = null!;
+    public override void _Ready()
+    {
+        _target = GetNode<Player>(TargetPath);
+        IgnoreRotation = false;
+        Zoom = Vector2.One * ViewZoom;
+        GlobalPosition = _target.GlobalPosition;
+    }
+    public override void _Process(double delta)
+    {
+        GlobalPosition = _target.GlobalPosition;
+        float angle = Vector2.Up.AngleTo(_target.BodyUp);
+        GlobalRotation = Mathf.LerpAngle(GlobalRotation, angle, 1 - Mathf.Exp(-RotationResponse * (float)delta));
+        Zoom = Vector2.One * ViewZoom;
+    }
+}
