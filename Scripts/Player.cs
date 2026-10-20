@@ -65,6 +65,7 @@ public partial class Player : CharacterBody2D
     private readonly GravitySelection _gravitySelection = new();
     private Vector2 _aimStart;
     private Vector2 _visualUp = Vector2.Up;
+    private Vector2 _physicalUp = Vector2.Up;
     private PhysicsBody2D? _lastSupportBody;
     private bool _skipGroundControl;
     private readonly KinematicCollision2D _supportProbe = new();
@@ -159,6 +160,7 @@ public partial class Player : CharacterBody2D
         _gravitySelection.Clear();
         SupportNormal = Vector2.Up;
         _visualUp = Vector2.Up;
+        _physicalUp = Vector2.Up;
         _skipGroundControl = true;
         TestAxis = 0;
         TestJump = false;
@@ -182,15 +184,16 @@ public partial class Player : CharacterBody2D
         if (State == MovementState.DownDash) { StepDash(dt); QueueRedraw(); return; }
         if (Aiming) { QueueRedraw(); return; }
 
-        Vector2 up;
+        Vector2 physicalUp;
         if (Grounded && !SupportNormal.IsZeroApprox())
-            up = SupportNormal;
+            physicalUp = SupportNormal;
         else if (hasUsableGravity)
-            up = -Gravity.Normalized();
+            physicalUp = -Gravity.Normalized();
         else
-            up = _visualUp;
-        if (up.LengthSquared() < 0.000001f) up = Vector2.Up;
-        UpDirection = up.Normalized();
+            physicalUp = _physicalUp;
+        if (physicalUp.LengthSquared() < 0.000001f) physicalUp = Vector2.Up;
+        UpDirection = physicalUp.Normalized();
+        if (Grounded || hasUsableGravity) _physicalUp = UpDirection;
 
         Vector2 controlUp = Grounded ? UpDirection : BodyUp;
         if (controlUp.LengthSquared() < 0.000001f) controlUp = UpDirection;

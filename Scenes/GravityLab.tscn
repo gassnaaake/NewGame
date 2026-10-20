@@ -6,6 +6,9 @@
 
 [node name="GravityLab" instance=ExtResource("1")]
 
+[node name="Sphere" parent="."]
+GravityLayer = 1
+
 [node name="Player" parent="." index="2"]
 position = Vector2(-500, -170)
 

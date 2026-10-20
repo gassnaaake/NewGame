@@ -74,7 +74,7 @@ public partial class GravityTests : Node
         Check(atA.Total.DistanceTo(Vector2.Down * 550) < 0.1f, "region A alone produces the total");
 
         GravitySelection inGap = GravitySelector.Select(_player.GravitySources, new Vector2(-375, -170));
-        Check(inGap.HighestPriorityLayer == 2, "leaving A falls back to layer 2");
+        Check(inGap.HighestPriorityLayer == 1, "leaving A falls back to layer 1");
         Check(inGap.Contributing.Count == 1 && inGap.Contributing[0].Name == "Sphere",
             "gap recomputes the current planet source instead of retaining A");
         Check(inGap.Total.Length() > 1, "gap has finite non-zero planet gravity");
@@ -162,9 +162,36 @@ public partial class GravityTests : Node
         Check(_player.Gravity.IsZeroApprox(), "C remains zero gravity while still inside the overlap");
         Check(_player.Velocity.Length() > 100, "C jump preserves inertial velocity");
         Check(_player.BodyUp.DistanceTo(bodyBefore) < 0.01f, "C body orientation stays stable");
+        Check(_player.UpDirection.Dot(Vector2.Up) > 0.99f,
+            "C physical up stays stable independently of visual body");
         Check(Mathf.Abs((GetViewport().GetCamera2D()?.GlobalRotation ?? 0) - cameraBefore) < 0.01f,
             "C camera orientation stays stable");
         Check(Mathf.Abs(_player.GlobalRotation) < 0.0001f, "visual body rotation does not rotate collision body");
+
+        // Two non-equal same-layer vectors must add, not cancel or override.
+        var sumDown = new GravityRegion
+        {
+            Name = "SumDown", DisplayName = "Sum down", GravityLayer = 0,
+            Size = new Vector2(300, 300), Direction = Vector2.Down, GravityStrength = 550,
+            Position = new Vector2(0, -2500)
+        };
+        var sumRight = new GravityRegion
+        {
+            Name = "SumRight", DisplayName = "Sum right", GravityLayer = 0,
+            Size = new Vector2(300, 300), Direction = Vector2.Right, GravityStrength = 300,
+            Position = new Vector2(0, -2500)
+        };
+        GetParent().AddChild(sumDown);
+        GetParent().AddChild(sumRight);
+        _player.RefreshGravitySources();
+        GravitySelection sumSelection = GravitySelector.Select(_player.GravitySources, new Vector2(0, -2500));
+        Check(sumSelection.Contributing.Count == 2, "non-equal same-layer regions both contribute");
+        Check(sumSelection.Total.DistanceTo(new Vector2(300, 550)) < 0.1f,
+            "non-equal same-layer vectors add correctly");
+        sumDown.QueueFree();
+        sumRight.QueueFree();
+        _player.RefreshGravitySources();
+        yield return 1;
 
         // A tiny non-zero same-layer sum must be applied as zero and stay stable.
         var nearDown = new GravityRegion
@@ -253,12 +280,12 @@ public partial class GravityTests : Node
             _player.GlobalPosition = new Vector2(x, -170);
             _player.Velocity = Vector2.Zero;
             yield return 1;
-            if (x == -375 && _player.CurrentGravityLayer == 2) sawGapLayer = true;
+            if (x == -375 && _player.CurrentGravityLayer == 1) sawGapLayer = true;
             if (x == -220 && _player.Gravity.IsZeroApprox() &&
                 _player.ContributingGravityRegions.Count == 2) sawZeroOverlap = true;
             previousLayer = _player.CurrentGravityLayer;
         }
-        Check(sawGapLayer, "high-speed boundary sweep observes the L2 gap");
+        Check(sawGapLayer, "high-speed boundary sweep observes the L1 gap");
         Check(sawZeroOverlap, "high-speed boundary sweep observes zero overlap");
         Check(_player.CurrentGravityLayer == 0, "boundary sweep ends in the C layer");
         Check(previousLayer == 0, "boundary sweep does not retain stale layer");
