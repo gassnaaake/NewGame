@@ -6,15 +6,20 @@ Godot 4 .NET + C# 的 2D 星球平台冒险原型。技术项目名仍为 `NewGa
 
 - [AGENTS.md](AGENTS.md)：所有 AI 共用的开发与协作规范。
 - [PROJECT_STATE.md](PROJECT_STATE.md)：唯一当前状态汇总，包含实现、验证、人工反馈、限制与授权边界。
-- [P002.md](P002.md)：下砸路线试玩步骤、参数及技术说明。
-- [Tests/P002-RESULTS.md](Tests/P002-RESULTS.md)、[Tests/RESULTS.md](Tests/RESULTS.md)：历史实际验证记录。
+- [P0022.md](P0022.md)：GravityLayer、角色/摄像机朝向和新对照场景的试玩说明。
+- [P002.md](P002.md)：P-002 下砸路线的历史说明；空中朝向和 J 时机已被 P-002.2 更新。
+- [Tests/P0022-RESULTS.md](Tests/P0022-RESULTS.md)、[Tests/P002-RESULTS.md](Tests/P002-RESULTS.md)、[Tests/RESULTS.md](Tests/RESULTS.md)：实际验证记录。
 - [docs/P001.md](docs/P001.md)：原 README 的 P-001 历史说明；其中旧行为不能当作当前状态。
 
 ## 启动
 
-使用 Godot **4.6.1 .NET** 导入 `project.godot`，构建后 F5 运行默认场景。需要支持 net8.0 的 .NET SDK。原双星球地图可打开 `Scenes/Lab.tscn` 后 F6 运行。
+使用 Godot **4.6.1 .NET** 导入 `project.godot`，构建后 F5 运行默认场景。需要支持 net8.0 的 .NET SDK。
 
-A/D 移动、Space 跳跃、空中 J 下砸、R 重置；鼠标反向拖拽为接地调试发射，Esc 取消瞄准。具体路线见 P002.md，构建与测试命令统一见 AGENTS.md。
+- P-002.2 对照场景：打开 [GravityLab.tscn](Scenes/GravityLab.tscn) 后按 **F6**；按 [P0022.md](P0022.md) 做 A/B/C 实验。
+- P-002 原路线：F5 仍运行 [RouteLab.tscn](Scenes/RouteLab.tscn)；起跳后**立即按 J**，不要等待。
+- 原双星球地图：打开 [Lab.tscn](Scenes/Lab.tscn) 后按 F6。
+
+A/D 移动、Space 跳跃、空中 J 下砸、R 重置；鼠标反向拖拽为接地调试发射，Esc 取消瞄准。具体试玩见 [P0022.md](P0022.md)，构建与测试命令统一见 [AGENTS.md](AGENTS.md)。
 
 ## 各 AI 工具如何接入
 
