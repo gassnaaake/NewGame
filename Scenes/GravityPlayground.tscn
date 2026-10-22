@@ -1,0 +1,320 @@
+[gd_scene format=3 uid="uid://duiyucsknr80s"]
+
+[ext_resource type="Script" uid="uid://c8f2vpben3i28" path="res://Scripts/Planet.cs" id="1_t8sce"]
+[ext_resource type="Script" uid="uid://bqo6ts0b4x1dl" path="res://Scripts/PlaygroundLevel.cs" id="1_xblky"]
+[ext_resource type="Script" uid="uid://dfb1rcf65hipr" path="res://Scripts/GravityRegion.cs" id="2_iav4s"]
+[ext_resource type="Script" uid="uid://df3ivowdtdkea" path="res://Scripts/DashPlatform.cs" id="3_xblky"]
+[ext_resource type="Script" uid="uid://c8nngafpegxem" path="res://Scripts/Player.cs" id="4_nxwq2"]
+[ext_resource type="Script" uid="uid://cerky3u4kmt7x" path="res://Scripts/FollowCamera.cs" id="5_ij4e3"]
+[ext_resource type="Script" uid="uid://8f38w3ikixvm" path="res://Scripts/GoalZone.cs" id="5_nxwq2"]
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_s4qht"]
+radius = 180.0
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_oo7fr"]
+radius = 180.0
+
+[sub_resource type="CapsuleShape2D" id="CapsuleShape2D_jw5fw"]
+radius = 130.0
+height = 560.0
+
+[sub_resource type="CapsuleShape2D" id="CapsuleShape2D_kt10y"]
+radius = 130.0
+height = 560.0
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_ey0vi"]
+radius = 12.0
+
+[node name="GravityPlayground" type="Node2D" unique_id=1285413506]
+script = ExtResource("1_xblky")
+HudTitle = "GRAVITY PLAYGROUND / P-002.3"
+
+[node name="World" type="Node2D" parent="." unique_id=768472793]
+
+[node name="Planets" type="Node2D" parent="World" unique_id=390430]
+
+[node name="Sphere" type="StaticBody2D" parent="World/Planets" unique_id=1569411577]
+position = Vector2(-1500, 100)
+script = ExtResource("1_t8sce")
+DisplayName = "Sphere · start planet"
+GravityLayer = 2
+AttractionGeometry = SubResource("CircleShape2D_s4qht")
+InfluenceRange = 450.0
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="World/Planets/Sphere" unique_id=2088050554]
+shape = SubResource("CircleShape2D_oo7fr")
+
+[node name="Capsule" type="StaticBody2D" parent="World/Planets" unique_id=1660273539]
+position = Vector2(1500, 1200)
+rotation = 1.5707963
+script = ExtResource("1_t8sce")
+DisplayName = "Capsule · goal planet"
+AttractionGeometry = SubResource("CapsuleShape2D_jw5fw")
+InfluenceRange = 240.0
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="World/Planets/Capsule" unique_id=698929580]
+shape = SubResource("CapsuleShape2D_kt10y")
+
+[node name="GravityZones" type="Node2D" parent="World" unique_id=1700837089]
+
+[node name="StartFlat_L0" type="Node2D" parent="World/GravityZones" unique_id=1013246282]
+position = Vector2(-1380, -450)
+script = ExtResource("2_iav4s")
+DisplayName = "START / L0 FLAT DOWN"
+Size = Vector2(1220, 520)
+
+[node name="FloatZone_L1" type="Node2D" parent="World/GravityZones" unique_id=146339766]
+position = Vector2(-650, -480)
+script = ExtResource("2_iav4s")
+DisplayName = "FLOAT ZONE / L1 WEAK 260"
+GravityLayer = 1
+Size = Vector2(640, 640)
+GravityStrength = 260.0
+RegionColor = Color(0.43529412, 0.7137255, 1, 1)
+
+[node name="Island_L0" type="Node2D" parent="World/GravityZones" unique_id=1928178944]
+position = Vector2(-400, -600)
+script = ExtResource("2_iav4s")
+DisplayName = "ISLAND / L0 OVERRIDES L1"
+Size = Vector2(300, 440)
+RegionColor = Color(0.49411765, 0.9411765, 0.73333335, 1)
+
+[node name="Feather_L0" type="Node2D" parent="World/GravityZones" unique_id=1991060289]
+position = Vector2(1680, 1000)
+script = ExtResource("2_iav4s")
+DisplayName = "FEATHER / L0 g=40"
+Size = Vector2(260, 380)
+GravityStrength = 40.0
+RegionColor = Color(0.8509804, 0.72156864, 1, 1)
+
+[node name="SumDown_L0" type="Node2D" parent="World/GravityZones" unique_id=1839936168]
+position = Vector2(-10, -560)
+script = ExtResource("2_iav4s")
+DisplayName = "SUM: DOWN 550"
+Size = Vector2(480, 640)
+RegionColor = Color(0.47058824, 0.8392157, 0.7529412, 1)
+
+[node name="SumRight_L0" type="Node2D" parent="World/GravityZones" unique_id=673310060]
+position = Vector2(110, -560)
+script = ExtResource("2_iav4s")
+DisplayName = "SUM: RIGHT 300"
+Size = Vector2(240, 480)
+Direction = Vector2(1, 0)
+GravityStrength = 300.0
+RegionColor = Color(1, 0.6431373, 0.36862746, 1)
+
+[node name="Bridge_L0" type="Node2D" parent="World/GravityZones" unique_id=319273351]
+position = Vector2(415, -530)
+script = ExtResource("2_iav4s")
+DisplayName = "BRIDGE / L0 FLAT"
+Size = Vector2(370, 620)
+RegionColor = Color(0.54509807, 0.8784314, 0.7529412, 1)
+
+[node name="Launch_L0" type="Node2D" parent="World/GravityZones" unique_id=506880665]
+position = Vector2(820, -600)
+script = ExtResource("2_iav4s")
+DisplayName = "LAUNCH / L0 TILTED 15°"
+Size = Vector2(440, 600)
+Direction = Vector2(0.258819, 0.965926)
+RegionColor = Color(1, 0.7019608, 0.75686276, 1)
+
+[node name="Terrain" type="Node2D" parent="World" unique_id=2041453896]
+
+[node name="StartDeck" type="StaticBody2D" parent="World/Terrain" unique_id=1323356667]
+position = Vector2(-1500, -380)
+script = ExtResource("3_xblky")
+Size = Vector2(400, 16)
+Caption = "START DECK"
+
+[node name="Step1" type="StaticBody2D" parent="World/Terrain" unique_id=435190237]
+position = Vector2(-1120, -421)
+script = ExtResource("3_xblky")
+Size = Vector2(160, 14)
+Caption = "STEP 1"
+
+[node name="Step2" type="StaticBody2D" parent="World/Terrain" unique_id=1692831610]
+position = Vector2(-920, -461)
+script = ExtResource("3_xblky")
+Size = Vector2(150, 14)
+Caption = "STEP 2"
+
+[node name="FloatDeck" type="StaticBody2D" parent="World/Terrain" unique_id=1709893975]
+position = Vector2(-680, -501)
+script = ExtResource("3_xblky")
+Size = Vector2(160, 14)
+Caption = "FLOAT L1"
+
+[node name="IslandDeck" type="StaticBody2D" parent="World/Terrain" unique_id=2107426418]
+position = Vector2(-400, -541)
+script = ExtResource("3_xblky")
+Size = Vector2(160, 14)
+Caption = "L0 ISLAND"
+
+[node name="SumDeck" type="StaticBody2D" parent="World/Terrain" unique_id=785062776]
+position = Vector2(0, -581)
+script = ExtResource("3_xblky")
+Size = Vector2(460, 14)
+Caption = "SUM: DOWN + RIGHT"
+
+[node name="BridgeDeck" type="StaticBody2D" parent="World/Terrain" unique_id=2064127752]
+position = Vector2(410, -601)
+script = ExtResource("3_xblky")
+Size = Vector2(300, 14)
+Caption = "BRIDGE"
+
+[node name="LaunchDeck" type="StaticBody2D" parent="World/Terrain" unique_id=239680938]
+position = Vector2(680, -601)
+script = ExtResource("3_xblky")
+Size = Vector2(220, 14)
+Caption = "LAUNCH DECK"
+
+[node name="LaunchRamp" type="StaticBody2D" parent="World/Terrain" unique_id=1507935830]
+position = Vector2(898, -630)
+rotation = -0.2617994
+script = ExtResource("3_xblky")
+Kind = 2
+Size = Vector2(220, 14)
+Caption = "JUMP + J"
+ShowTakeoffMarker = true
+
+[node name="FeatherPad" type="StaticBody2D" parent="World/Terrain" unique_id=1523380860]
+position = Vector2(1680, 1050)
+script = ExtResource("3_xblky")
+Size = Vector2(160, 14)
+Caption = "FEATHER PAD"
+
+[node name="FeatherCeiling" type="StaticBody2D" parent="World/Terrain" unique_id=656731462]
+position = Vector2(1680, 815)
+script = ExtResource("3_xblky")
+Size = Vector2(180, 14)
+Caption = "FEATHER CEILING"
+
+[node name="Gameplay" type="Node2D" parent="." unique_id=588451031]
+
+[node name="GoalBeacon" type="Area2D" parent="Gameplay" unique_id=1151015054]
+position = Vector2(1500, 1040)
+collision_layer = 0
+collision_mask = 2
+script = ExtResource("5_nxwq2")
+
+[node name="HUD" type="CanvasLayer" parent="." unique_id=531772681]
+
+[node name="Debug" type="Label" parent="HUD" unique_id=1904270187]
+offset_left = 18.0
+offset_top = 548.0
+theme_override_colors/font_color = Color(0.84313726, 0.8862745, 0.9411765, 1)
+theme_override_colors/font_outline_color = Color(0.039215688, 0.07058824, 0.1254902, 1)
+theme_override_constants/outline_size = 4
+theme_override_font_sizes/font_size = 13
+
+[node name="Title" type="Label" parent="HUD" unique_id=1217244995]
+offset_left = 18.0
+offset_top = 14.0
+theme_override_colors/font_color = Color(0.7137255, 0.8509804, 0.9490196, 1)
+theme_override_font_sizes/font_size = 22
+text = "P-002.3 / GRAVITY PLAYGROUND"
+
+[node name="Objective" type="Label" parent="HUD" unique_id=2136446791]
+offset_left = 18.0
+offset_top = 48.0
+theme_override_colors/font_color = Color(0.9098039, 0.93333334, 0.972549, 1)
+theme_override_font_sizes/font_size = 15
+text = "Reach the capsule beacon.  A/D move · Space jump · J air down-dash · R restart"
+
+[node name="Status" type="Label" parent="HUD" unique_id=1109428804]
+offset_left = 18.0
+offset_top = 74.0
+theme_override_colors/font_color = Color(1, 0.81960785, 0.4, 1)
+theme_override_font_sizes/font_size = 15
+text = "Follow the colored gravity zones toward the capsule."
+
+[node name="Player" type="CharacterBody2D" parent="." unique_id=1648577735]
+position = Vector2(-1560, -410)
+collision_layer = 2
+script = ExtResource("4_nxwq2")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Player" unique_id=1568741256]
+shape = SubResource("CircleShape2D_ey0vi")
+
+[node name="Camera" type="Camera2D" parent="." unique_id=789898749]
+position = Vector2(-1560, -410)
+script = ExtResource("5_ij4e3")
+
+[node name="Signs" type="Node2D" parent="." unique_id=1770720299]
+
+[node name="StartSign" type="Label" parent="Signs" unique_id=823076131]
+offset_left = -1700.0
+offset_top = -468.0
+offset_right = -1699.0
+offset_bottom = -445.0
+theme_override_colors/font_color = Color(0.8117647, 0.8784314, 0.9411765, 1)
+theme_override_colors/font_outline_color = Color(0.039215688, 0.07058824, 0.1254902, 1)
+theme_override_constants/outline_size = 4
+theme_override_font_sizes/font_size = 14
+text = "START · NORMAL JUMPS (L0 FLAT)"
+
+[node name="PrioritySign" type="Label" parent="Signs" unique_id=1953784458]
+offset_left = -930.0
+offset_top = -642.0
+offset_right = -929.0
+offset_bottom = -619.0
+theme_override_colors/font_color = Color(0.8117647, 0.8784314, 0.9411765, 1)
+theme_override_colors/font_outline_color = Color(0.039215688, 0.07058824, 0.1254902, 1)
+theme_override_constants/outline_size = 4
+theme_override_font_sizes/font_size = 14
+text = "L1 FLOAT → L0 ISLAND"
+
+[node name="FeatherSign" type="Label" parent="Signs" unique_id=614651441]
+offset_left = 1500.0
+offset_top = 952.0
+offset_right = 1796.0
+offset_bottom = 975.0
+theme_override_colors/font_color = Color(0.8509804, 0.72156864, 1, 1)
+theme_override_colors/font_outline_color = Color(0.039215688, 0.07058824, 0.1254902, 1)
+theme_override_constants/outline_size = 4
+theme_override_font_sizes/font_size = 14
+text = "FEATHER ZONE · L0 g=40 · JUMP TO FLOAT"
+
+[node name="SumSign" type="Label" parent="Signs" unique_id=886838744]
+offset_left = -250.0
+offset_top = -772.0
+offset_right = -249.0
+offset_bottom = -749.0
+theme_override_colors/font_color = Color(1, 0.6431373, 0.36862746, 1)
+theme_override_colors/font_outline_color = Color(0.039215688, 0.07058824, 0.1254902, 1)
+theme_override_constants/outline_size = 4
+theme_override_font_sizes/font_size = 14
+text = "RIGHT HALF: L0 DOWN + L0 RIGHT = (300, 550)"
+
+[node name="BridgeSign" type="Label" parent="Signs" unique_id=935668974]
+offset_left = 300.0
+offset_top = -780.0
+offset_right = 301.0
+offset_bottom = -757.0
+theme_override_colors/font_color = Color(0.8117647, 0.8784314, 0.9411765, 1)
+theme_override_colors/font_outline_color = Color(0.039215688, 0.07058824, 0.1254902, 1)
+theme_override_constants/outline_size = 4
+theme_override_font_sizes/font_size = 14
+text = "BRIDGE · NORMAL JUMPS · R RESTARTS"
+
+[node name="LaunchSign" type="Label" parent="Signs" unique_id=467246574]
+offset_left = 590.0
+offset_top = -762.0
+offset_right = 591.0
+offset_bottom = -739.0
+theme_override_colors/font_color = Color(1, 0.7019608, 0.75686276, 1)
+theme_override_colors/font_outline_color = Color(0.039215688, 0.07058824, 0.1254902, 1)
+theme_override_constants/outline_size = 4
+theme_override_font_sizes/font_size = 14
+text = "RAMP: JUMP, THEN J IMMEDIATELY"
+
+[node name="GoalSign" type="Label" parent="Signs" unique_id=724496258]
+offset_left = 1320.0
+offset_top = 900.0
+offset_right = 1321.0
+offset_bottom = 923.0
+theme_override_colors/font_color = Color(1, 0.81960785, 0.4, 1)
+theme_override_colors/font_outline_color = Color(0.039215688, 0.07058824, 0.1254902, 1)
+theme_override_constants/outline_size = 5
+theme_override_font_sizes/font_size = 18
+text = "GOAL · CAPSULE BEACON"
