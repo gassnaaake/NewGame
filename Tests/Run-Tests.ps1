@@ -1,8 +1,10 @@
 param(
-    [string]$Godot = 'E:\Godot_v4.6.1-stable_mono_win64\Godot_v4.6.1-stable_mono_win64_console.exe',
+    [string]$Godot = '',
     [int]$RenderFps = 120
 )
 $ErrorActionPreference = 'Stop'
+. "$PSScriptRoot\Resolve-Godot.ps1"
+$Godot = Resolve-GodotPath -Godot $Godot
 $projectDirectory = Split-Path $PSScriptRoot -Parent
 Push-Location $projectDirectory
 try {

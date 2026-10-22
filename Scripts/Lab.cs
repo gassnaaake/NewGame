@@ -5,6 +5,9 @@ namespace PlanetLab;
 
 public partial class Lab : Node2D
 {
+    // Each playable level can name itself without forking the debug HUD.
+    [Export] public string HudTitle { get; set; } = "PLANET LAB / P-002.2";
+
     private Player _player = null!;
     private Label _debug = null!;
     public override void _Ready()
@@ -57,7 +60,7 @@ public partial class Lab : Node2D
         string active = Describe(_player.ActiveGravityRegions, includeVectors: true);
         string contributing = Describe(_player.ContributingGravityRegions, includeVectors: true);
         string priority = _player.CurrentGravityLayer < 0 ? "none" : $"L{_player.CurrentGravityLayer}";
-        _debug.Text = $"PLANET LAB / P-002.2\n" +
+        _debug.Text = $"{HudTitle}\n" +
             $"State: {_player.State}  Body up: {_player.BodyUp.ToString("F2")}  Camera rot: {Mathf.RadToDeg(camera?.GlobalRotation ?? 0):F1} deg\n" +
             $"Gravity layer: {priority}  source: {_player.GravitySourceLabel}  angle: {(g.IsZeroApprox() ? "--" : angle.ToString("F1"))}\n" +
             $"Active regions ({_player.ActiveGravityRegions.Count}): {active}\n" +

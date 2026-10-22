@@ -1,78 +1,70 @@
-[gd_scene load_steps=4 format=3]
+[gd_scene format=3 uid="uid://jyhkfvsoabh0"]
 
 [ext_resource type="PackedScene" path="res://Scenes/Lab.tscn" id="1"]
-[ext_resource type="Script" path="res://Scripts/GravityRegion.cs" id="2"]
-[ext_resource type="Script" path="res://Scripts/DashPlatform.cs" id="3"]
+[ext_resource type="Script" uid="uid://dfb1rcf65hipr" path="res://Scripts/GravityRegion.cs" id="2"]
+[ext_resource type="Script" uid="uid://df3ivowdtdkea" path="res://Scripts/DashPlatform.cs" id="3"]
 
-[node name="GravityLab" instance=ExtResource("1")]
+[node name="GravityLab" unique_id=419242932 instance=ExtResource("1")]
 
-[node name="Sphere" parent="."]
+[node name="Sphere" parent="." index="0"]
 GravityLayer = 1
 
 [node name="Player" parent="." index="2"]
 position = Vector2(-500, -170)
 
-[node name="Title" type="Label" parent="."]
+[node name="Title" type="Label" parent="." index="7" unique_id=1494810577]
 offset_left = -640.0
 offset_top = -430.0
 theme_override_colors/font_color = Color(0.7, 0.85, 0.95, 1)
 theme_override_font_sizes/font_size = 20
 text = "P-002.2 GRAVITY LAB"
 
-[node name="HintA" type="Label" parent="."]
+[node name="HintA" type="Label" parent="." index="8" unique_id=638410547]
 offset_left = -640.0
 offset_top = -398.0
 theme_override_colors/font_color = Color(0.65, 0.95, 0.78, 1)
 theme_override_font_sizes/font_size = 15
 text = "A/B: L0 flat gravity over L1 sphere."
 
-[node name="HintC" type="Label" parent="."]
+[node name="HintC" type="Label" parent="." index="9" unique_id=300367529]
 offset_left = -300.0
 offset_top = -398.0
 theme_override_colors/font_color = Color(0.75, 0.85, 1, 1)
 theme_override_font_sizes/font_size = 15
 text = "C: L0 down + L0 up = zero."
 
-[node name="HintMove" type="Label" parent="."]
+[node name="HintMove" type="Label" parent="." index="10" unique_id=2113027212]
 offset_left = -640.0
 offset_top = -368.0
 theme_override_colors/font_color = Color(0.85, 0.9, 1, 1)
 theme_override_font_sizes/font_size = 14
 text = "Left: jump/land. Right: walk into the overlap, jump to float. R resets."
 
-[node name="Deck" type="StaticBody2D" parent="."]
+[node name="Deck" type="StaticBody2D" parent="." index="11" unique_id=625322055]
 position = Vector2(-400, -150)
 script = ExtResource("3")
 Size = Vector2(500, 16)
 Caption = "GRAVITY TEST DECK"
 
-[node name="RegionA" type="Node2D" parent="."]
+[node name="RegionA" type="Node2D" parent="." index="12" unique_id=2128435135]
 position = Vector2(-500, -120)
 script = ExtResource("2")
 DisplayName = "A / L0 flat down"
-GravityLayer = 0
 Size = Vector2(240, 300)
-Direction = Vector2(0, 1)
-GravityStrength = 550.0
+ShowLabel = false
 
-[node name="RegionCLeft" type="Node2D" parent="."]
+[node name="RegionCLeft" type="Node2D" parent="." index="13" unique_id=1934966765]
 position = Vector2(-270, -120)
 script = ExtResource("2")
 DisplayName = "C / L0 down"
-GravityLayer = 0
 Size = Vector2(200, 300)
-Direction = Vector2(0, 1)
-GravityStrength = 550.0
 RegionColor = Color(0.45, 0.75, 1, 1)
 
-[node name="RegionCRight" type="Node2D" parent="."]
+[node name="RegionCRight" type="Node2D" parent="." index="14" unique_id=1402903874]
 position = Vector2(-170, -120)
 script = ExtResource("2")
 DisplayName = "C / L0 up"
-GravityLayer = 0
 Size = Vector2(200, 300)
 Direction = Vector2(0, -1)
-GravityStrength = 550.0
 RegionColor = Color(1, 0.65, 0.45, 1)
 LabelOffset = Vector2(100, 0)
-

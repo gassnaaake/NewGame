@@ -80,17 +80,19 @@
 
 ### 构建与测试入口
 
-在项目根目录 PowerShell 中，将 `$godotExe` 设置为实际核实的 Godot 4.7.2 .NET 控制台程序绝对路径：
+在项目根目录 PowerShell 中执行。脚本会自行解析 Godot 4.7.2 .NET 控制台程序：显式 `-Godot` > `GODOT_EXE` > 本机已知 4.7.2 安装路径；不再回退到 4.6.1。
 
 ```powershell
-# 先按本机安装位置设置 $godotExe，再执行以下命令。
 dotnet build NewGame.csproj
-./Tests/Run-Tests.ps1 -Godot $godotExe
-./Tests/Run-P002.ps1 -Godot $godotExe
-./Tests/Run-P002.ps1 -Godot $godotExe -RenderFps 30
+./Tests/Run-P0023.ps1
+./Tests/Run-P0023.ps1 -RenderFps 30
 ```
 
-测试脚本会构建并启动真实 Godot 场景，不是 `dotnet test` 项目。`Run-P002.ps1` 已含 P-001 回归，通常无需再跑 `Run-Tests.ps1`。显示步频与物理频率不同，后者由项目配置决定。脚本当前默认路径仍指向旧版 4.6.1，迁移验证必须显式传入核实后的 `-Godot`；旧环境测试见历史记录，不代表 4.7.2 已通过。
+- `Run-P0023.ps1` 是当前完整验证入口：同一构建内运行 P-002.2/P-001 的 293 项回归 + P-002.3 `GravityPlayground` 的 46 项，共 339 项。
+- `Run-P002.ps1` 只运行 P-002.2 的六组回归（含 P-001），`Run-Tests.ps1` 只运行 P-001；需要分阶段定位时使用。
+- 显示步频由 `-RenderFps` 指定，物理频率由 `project.godot` 决定（当前 120 Hz）。测试会启动真实 Godot 场景，不是 `dotnet test` 项目。
+- 本机 PowerShell 默认脚本执行策略可能阻止 `.ps1`；遇到时用 `powershell -NoProfile -ExecutionPolicy Bypass -File .\Tests\Run-P0023.ps1 ...`。这是环境限制，不是测试失败。
+- 2026-10-22 的 4.7.2 实际结果见 [Tests/P0023-RESULTS.md](Tests/P0023-RESULTS.md)。4.6.1 的历史记录不能单独作为当前通过依据。
 
 纯文档修改进行链接、内容和 diff 核验即可，无需机械重跑游戏测试。
 
