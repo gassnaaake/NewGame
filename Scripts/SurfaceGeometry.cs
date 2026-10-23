@@ -4,7 +4,7 @@ namespace PlanetLab;
 
 public readonly record struct SurfaceSample(Vector2 Point, Vector2 Normal, float SignedDistance);
 
-// Queries the exterior boundary, never individual collision contacts or decomposition seams.
+// 中文：只查询吸引形状的外边界，不读取实体碰撞接触点或分解缝隙。
 public static class SurfaceGeometry
 {
     public static SurfaceSample Sample(Shape2D shape, Vector2 position)

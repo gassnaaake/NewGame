@@ -33,12 +33,53 @@ public partial class PlatformTests : Node
     }
     private DashPlatform Platform(string name, Vector2 position, Vector2 size, DashPlatform.PlatformKind kind)
     {
-        var p = new DashPlatform { Name = name, Position = position, Size = size, Kind = kind };
+        // 中文：测试平台也使用真实 CollisionShape2D 子节点，不依赖运行时隐藏生成。
+        var p = new DashPlatform { Name = name, Position = position, Kind = kind };
+        p.AddChild(new CollisionShape2D
+        {
+            Name = "CollisionShape2D",
+            Shape = new RectangleShape2D { Size = size }
+        });
         GetParent().AddChild(p);
         return p;
     }
     private IEnumerable<int> Run()
     {
+        // 中文：检查平台现在是“节点 + 真实碰撞子节点”的组合，且尺寸来自 Shape。
+        var probe = Platform("ShapeProbe", new Vector2(-3000, -500), new Vector2(100, 10),
+            DashPlatform.PlatformKind.Solid);
+        yield return 1;
+        Check(probe.GetChildCount() == 1 && probe.CollisionShapeNode?.Shape is RectangleShape2D,
+            "platform has one real RectangleShape2D child");
+        Check(probe.Size.DistanceTo(new Vector2(100, 10)) < 0.01f,
+            "platform Size reads the child collision shape");
+        var probeShape = (RectangleShape2D)probe.CollisionShapeNode!.Shape!;
+        probeShape.Size = new Vector2(20, 10);
+        Check(probe.Size.DistanceTo(new Vector2(20, 10)) < 0.01f,
+            "editing the child shape changes the derived size");
+        Check(!probe.OverlapsPlayer(new Vector2(-2970, -500), 1),
+            "collision query follows the edited child shape");
+
+        bool helpFound = false, helpReadOnly = false, helpStored = false, helpGroupFound = false;
+        foreach (Godot.Collections.Dictionary property in probe.GetPropertyList())
+        {
+            var usage = property["usage"].As<PropertyUsageFlags>();
+            string propertyName = property["name"].AsStringName().ToString();
+            if (propertyName == "UsageNote")
+            {
+                helpFound = true;
+                helpReadOnly = usage.HasFlag(PropertyUsageFlags.ReadOnly);
+                helpStored = usage.HasFlag(PropertyUsageFlags.Storage);
+            }
+            if (propertyName == "① 平台玩法（常用）" && usage.HasFlag(PropertyUsageFlags.Group))
+                helpGroupFound = true;
+        }
+        Check(helpFound && helpReadOnly && !helpStored,
+            "platform UsageNote is read-only and not serialized");
+        Check(helpGroupFound, "platform Chinese gameplay group is present");
+        probe.QueueFree();
+        yield return 1;
+
         foreach (var kind in new[] { DashPlatform.PlatformKind.Breakable, DashPlatform.PlatformKind.DashPass })
         {
             // Use the sphere's upward gravity frame to verify real standing and jumping.

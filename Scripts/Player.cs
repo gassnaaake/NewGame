@@ -173,6 +173,7 @@ public partial class Player : CharacterBody2D
         bool hadSupport = Grounded;
         RestoreClearedPlatforms();
 
+        // 中文：每物理帧按当前位置重新选择重力源；不缓存进入历史或上一个来源。
         GravitySelector.Select(_gravitySources, GlobalPosition, _gravitySelection);
         float deadzone = Mathf.Max(0, GravityDeadzone);
         Gravity = _gravitySelection.Total.LengthSquared() > deadzone * deadzone
@@ -247,6 +248,8 @@ public partial class Player : CharacterBody2D
         else if (hasUsableGravity && SupportProbeDistance > 0 &&
                  TestMove(GlobalTransform, -UpDirection * SupportProbeDistance, _supportProbe, 0.01f))
         {
+            // 中文：支撑探针只观察亚像素接触，不移动/吸附角色；不接受正在分离的接触，
+            // 避免起跳或高速离地时被错误判定为接地。
             // Observe subpixel support without moving/snapping the body. Never accept
             // a separating contact (jump / tangent launch / high-speed detachment).
             Vector2 normal = _supportProbe.GetNormal().Normalized();
@@ -260,6 +263,8 @@ public partial class Player : CharacterBody2D
             }
         }
 
+        // 中文：首次接地或支撑体变化时，只去掉法线速度，保留切向速度；
+        // 不在弯曲胶囊上每帧投影，避免与碰撞响应互相打架。
         // Touchdown consumes only the normal component. A support probe can report
         // contact just before MoveAndSlide has removed incoming normal velocity.
         // Project again when the support body changes, but not every frame on a
@@ -277,6 +282,8 @@ public partial class Player : CharacterBody2D
     {
         if (State == MovementState.DownDash) return;
 
+        // 中文：视觉朝向目标：接地用支撑法线，空中用有效重力反方向；
+        // 无/近零重力时保持上一次可靠朝向，不用微小合力乱转。
         Vector2 target;
         if (Grounded && !SupportNormal.IsZeroApprox())
             target = SupportNormal;
@@ -301,6 +308,7 @@ public partial class Player : CharacterBody2D
         _visualUp = Vector2.FromAngle(nextAngle).Normalized();
     }
 
+    // 中文：下砸只允许在空中发动；锁定发动瞬间的视觉脚下方向，之后不再跟随重力。
     public bool TryBeginDash()
     {
         if (Grounded || Aiming || State != MovementState.Normal) return false;
@@ -312,6 +320,8 @@ public partial class Player : CharacterBody2D
 
     private void StepDash(float dt)
     {
+        // 中文：下砸是直线定速扫掠；遇到普通实体停止，遇到易碎/穿越平台则按既有规则
+        // 破坏或添加临时碰撞例外，并把剩余位移继续用完。
         Velocity = DashDirection * Mathf.Max(1, DownDashSpeed);
         Vector2 remaining = Velocity * dt;
         while (!remaining.IsZeroApprox())

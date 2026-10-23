@@ -3,9 +3,8 @@ using System.Collections.Generic;
 
 namespace PlanetLab;
 
-// The one place that applies the GravityLayer policy. This reads only the
-// character's current position and the configured regions; no trigger order,
-// entering history or last-source state is consulted.
+// 中文：GravityLayer 规则的唯一入口。只读取角色当前位置和配置好的重力源，
+// 不依赖 Trigger 回调、进入顺序或“上一个来源”；同一帧内可重复调用。
 public static class GravitySelector
 {
     public static GravitySelection Select(IReadOnlyList<IGravitySource> sources, Vector2 position)

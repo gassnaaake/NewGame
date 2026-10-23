@@ -2,9 +2,8 @@ using Godot;
 
 namespace PlanetLab;
 
-// P-002.3 playable grey-box controller. Reuses Lab's HUD, R reload and test
-// hooks; adds only the goal acknowledgement and an out-of-bounds restart so a
-// player who leaves the lab is never stuck in an endless fall.
+// 中文：P-002.3 可玩灰盒控制器。复用 Lab 的 HUD、R 重开和测试入口；
+// 只增加终点确认、越界/失去重力的自动重开和 HUD 标题，不改变运动规则。
 public partial class PlaygroundLevel : Lab
 {
     [Export] public NodePath GoalPath { get; set; } = "Gameplay/GoalBeacon";
@@ -57,6 +56,8 @@ public partial class PlaygroundLevel : Lab
         base._Process(delta);
         if (_testing || _restartQueued || GoalReached || !IsInstanceValid(_levelPlayer)) return;
 
+        // 中文：离开所有重力源且不在下砸中超过 4 秒，说明玩家飘走了；自动重开，
+        // 避免永远漂浮。正常的星际下砸期间 State=DownDash，不会触发。
         Vector2 position = _levelPlayer.GlobalPosition;
         bool outside = position.Y > RestartBelowY || Mathf.Abs(position.X) > RestartOutsideX;
         if (_levelPlayer.HasActiveGravity || _levelPlayer.State == Player.MovementState.DownDash)

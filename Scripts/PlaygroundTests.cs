@@ -57,6 +57,29 @@ public partial class PlaygroundTests : Node
         GD.Print($"PASS: {message}");
     }
 
+    // 中文：验证 Inspector 元数据本身：说明只读、不序列化，且中文玩法分组存在。
+    // 真正的中文排版/可读性仍需人在 Inspector 中检查。
+    private void CheckInspectorHelp(Node node, string expectedGroup, string label)
+    {
+        bool helpFound = false, helpReadOnly = false, helpStored = false, groupFound = false;
+        foreach (Godot.Collections.Dictionary property in node.GetPropertyList())
+        {
+            var usage = property["usage"].As<PropertyUsageFlags>();
+            string propertyName = property["name"].AsStringName().ToString();
+            if (propertyName == "UsageNote")
+            {
+                helpFound = true;
+                helpReadOnly = usage.HasFlag(PropertyUsageFlags.ReadOnly);
+                helpStored = usage.HasFlag(PropertyUsageFlags.Storage);
+            }
+            if (propertyName == expectedGroup && usage.HasFlag(PropertyUsageFlags.Group))
+                groupFound = true;
+        }
+        Check(helpFound && helpReadOnly && !helpStored,
+            $"{label}: Chinese usage note is read-only and not serialized");
+        Check(groupFound, $"{label}: Chinese gameplay group is present");
+    }
+
     private IEnumerable<int> Run()
     {
         yield return 120;
@@ -68,6 +91,34 @@ public partial class PlaygroundTests : Node
         Check(_player.GravityTotal.DistanceTo(Vector2.Down * 550) < 0.1f,
             "start zone applies flat 550 downward gravity");
         Check(_startDeck.Size.X >= 300, "start deck is wide enough for a normal jump test");
+
+        // 中文：手摆平台必须由真实子碰撞组成；不得依赖运行时隐藏生成，也不得共用 Shape。
+        Node2D terrain = _level.GetNode<Node2D>("World/Terrain");
+        int platformCount = 0, missingShape = 0, duplicateShapeOrChild = 0;
+        var shapes = new List<Shape2D>();
+        foreach (Node node in terrain.GetChildren())
+        {
+            if (node is not DashPlatform platform) continue;
+            platformCount++;
+            if (platform.GetChildCount() != 1) duplicateShapeOrChild++;
+            if (platform.GetNodeOrNull<CollisionShape2D>("CollisionShape2D")?.Shape is not RectangleShape2D shape)
+            {
+                missingShape++;
+                continue;
+            }
+            if (shapes.Contains(shape)) duplicateShapeOrChild++;
+            shapes.Add(shape);
+        }
+        Check(platformCount == 11, "all hand-placed platforms are present");
+        Check(missingShape == 0, "every hand-placed platform has a real RectangleShape2D child");
+        Check(duplicateShapeOrChild == 0,
+            "platform shapes are independent and no runtime-injected collision child exists");
+
+        CheckInspectorHelp(_level.GetNode<GravityRegion>("World/GravityZones/StartFlat_L0"),
+            "① 常用玩法（优先调整）", "GravityRegion");
+        CheckInspectorHelp(_level.GetNode<Planet>("World/Planets/Sphere"),
+            "① 常用玩法（优先调整）", "Planet");
+        CheckInspectorHelp(_goal, "① 终点触发（常用）", "GoalZone");
 
         // Zone policy by position, independent of trigger history.
         GravitySelection atStart = GravitySelector.Select(_player.GravitySources, new Vector2(-1560, -410));

@@ -1,9 +1,24 @@
-[gd_scene load_steps=3 format=3]
+[gd_scene format=3 uid="uid://vwtjvoadx7jg"]
 
 [ext_resource type="PackedScene" path="res://Scenes/Lab.tscn" id="1"]
-[ext_resource type="Script" path="res://Scripts/DashPlatform.cs" id="2"]
+[ext_resource type="Script" uid="uid://df3ivowdtdkea" path="res://Scripts/DashPlatform.cs" id="2"]
 
-[node name="RouteLab" instance=ExtResource("1")]
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_od8cx"]
+size = Vector2(140, 12)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_jp72s"]
+size = Vector2(120, 12)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_qjd6v"]
+size = Vector2(160, 12)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_5us6a"]
+size = Vector2(200, 12)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_rsaca"]
+size = Vector2(220, 12)
+
+[node name="RouteLab" unique_id=1925577828 instance=ExtResource("1")]
 
 [node name="Sphere" parent="." index="0"]
 GravityStrength = 350.0
@@ -18,40 +33,50 @@ JumpSpeed = 340.0
 offset_left = 755.0
 offset_top = 1415.448
 
-[node name="Step1" type="StaticBody2D" parent="."]
+[node name="Step1" type="StaticBody2D" parent="." index="7" unique_id=224697425]
 position = Vector2(-300, -130)
 script = ExtResource("2")
-Size = Vector2(140, 12)
 Caption = "1 / jump"
 
-[node name="Step2" type="StaticBody2D" parent="."]
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Step1" index="0" unique_id=600115669]
+shape = SubResource("RectangleShape2D_od8cx")
+
+[node name="Step2" type="StaticBody2D" parent="." index="8" unique_id=1742227349]
 position = Vector2(-205, -180)
 rotation = -0.2617994
 script = ExtResource("2")
-Size = Vector2(120, 12)
 Caption = "2 / jump"
 
-[node name="LaunchPad" type="StaticBody2D" parent="."]
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Step2" index="0" unique_id=1158376793]
+shape = SubResource("RectangleShape2D_jp72s")
+
+[node name="LaunchPad" type="StaticBody2D" parent="." index="9" unique_id=1941220982]
 position = Vector2(-115, -225)
 rotation = -0.5235988
 script = ExtResource("2")
-Size = Vector2(160, 12)
 Kind = 2
 Caption = "3 / jump, then J"
 ShowTakeoffMarker = true
 
-[node name="Breakable" type="StaticBody2D" parent="."]
+[node name="CollisionShape2D" type="CollisionShape2D" parent="LaunchPad" index="0" unique_id=266036353]
+shape = SubResource("RectangleShape2D_qjd6v")
+
+[node name="Breakable" type="StaticBody2D" parent="." index="10" unique_id=1663372342]
 position = Vector2(-55, -121.077)
 rotation = -0.5235988
 script = ExtResource("2")
-Size = Vector2(200, 12)
 Kind = 1
 Caption = "BREAK"
 
-[node name="PassGate" type="StaticBody2D" parent="."]
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Breakable" index="0" unique_id=80816104]
+shape = SubResource("RectangleShape2D_5us6a")
+
+[node name="PassGate" type="StaticBody2D" parent="." index="11" unique_id=1499404088]
 position = Vector2(5, -17.154)
 rotation = -0.5235988
 script = ExtResource("2")
-Size = Vector2(220, 12)
 Kind = 2
 Caption = "PASS"
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="PassGate" index="0" unique_id=505297386]
+shape = SubResource("RectangleShape2D_rsaca")

@@ -2,13 +2,9 @@ using Godot;
 
 namespace PlanetLab;
 
-// A rectangular, independently configurable gravity region. It has no collision
-// shape; terrain collision stays on Planet / DashPlatform / other static bodies.
-//
-// [Tool] only adds a drawing preview: the rectangle uses the same Size clamp and
-// the same half-extent test as TryGetGravity, so the shown area is exactly the
-// area the runtime queries. No nodes, colliders or scene properties are created
-// or changed by the preview.
+// 中文：矩形、固定方向的局部重力区域。没有碰撞体：地形碰撞属于 Planet / DashPlatform。
+// [Tool] 预览使用与 TryGetGravity 完全相同的 Size 钳制和半矩形判定，因此画出来的范围
+// 就是运行时实际生效的范围；预览不会创建节点、碰撞或场景属性。
 [Tool]
 public partial class GravityRegion : Node2D, IGravitySource
 {
@@ -21,18 +17,14 @@ public partial class GravityRegion : Node2D, IGravitySource
     private bool _showLabel = true;
     private Vector2 _labelOffset = Vector2.Zero;
 
-    [ExportGroup("Identity / Priority")]
-    [Export]
-    public string DisplayName
-    {
-        get => _displayName;
-        set
-        {
-            _displayName = value ?? string.Empty;
-            QueueRedraw();
-        }
-    }
+    [ExportGroup("使用说明（只读）")]
+    [Export(PropertyHint.MultilineText)]
+    public string UsageNote { get; set; } =
+        "常用：GravityLayer 0 最高，数字越大优先级越低；GravityStrength 单位 px/s²，越大拉力越强。\n" +
+        "Size 是矩形范围（px），应覆盖平台和完整跳跃空间；Direction 是局部方向，如 (0,1) 向下、(1,0) 向右，旋转区域会一起转。\n" +
+        "同 Layer 区域相加；较低 Layer 完全不参与；外观/标签只影响显示。";
 
+    [ExportGroup("① 常用玩法（优先调整）")]
     [Export(PropertyHint.Range, "0,32,1")]
     public int GravityLayer
     {
@@ -44,7 +36,7 @@ public partial class GravityRegion : Node2D, IGravitySource
         }
     }
 
-    [ExportSubgroup("Range")]
+    [ExportSubgroup("范围")]
     [Export]
     public Vector2 Size
     {
@@ -56,9 +48,8 @@ public partial class GravityRegion : Node2D, IGravitySource
         }
     }
 
-    // Direction is configured in the region's local space, so rotating the
-    // region rotates its gravity with it.
-    [ExportSubgroup("Direction & Strength")]
+    // 中文：Direction 是区域局部方向；区域旋转时重力方向一起旋转。
+    [ExportSubgroup("方向与强度")]
     [Export]
     public Vector2 Direction
     {
@@ -81,7 +72,19 @@ public partial class GravityRegion : Node2D, IGravitySource
         }
     }
 
-    [ExportGroup("Appearance")]
+    [ExportGroup("② 标识与显示")]
+    [Export]
+    public string DisplayName
+    {
+        get => _displayName;
+        set
+        {
+            _displayName = value ?? string.Empty;
+            QueueRedraw();
+        }
+    }
+
+    [ExportGroup("③ 外观 / 标签（次要）")]
     [Export]
     public Color RegionColor
     {
@@ -126,18 +129,20 @@ public partial class GravityRegion : Node2D, IGravitySource
 
     public override void _EnterTree()
     {
-        // The editor preview must not add groups to the saved scene.
+        // 中文：编辑器预览不把区域加入运行时重力源分组。
         if (!Engine.IsEditorHint())
             AddToGroup("gravity_sources");
     }
 
     public override void _Ready()
     {
-        // Node2D does not request transform notifications by default; this is
-        // what refreshes the preview after gizmo moves/rotations without any
-        // per-frame redraw.
         SetNotifyTransform(true);
         QueueRedraw();
+    }
+
+    public override void _ValidateProperty(Godot.Collections.Dictionary property)
+    {
+        EditorHelp.MakeReadOnly(property, nameof(UsageNote));
     }
 
     public override void _Notification(int what)
@@ -146,6 +151,7 @@ public partial class GravityRegion : Node2D, IGravitySource
             QueueRedraw();
     }
 
+    // 中文：唯一的重力查询入口；边界完全由局部 Size 决定，没有额外碰撞。
     public bool TryGetGravity(Vector2 worldPosition, out Vector2 gravity)
     {
         Vector2 local = ToLocal(worldPosition);

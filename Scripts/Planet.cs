@@ -2,10 +2,10 @@ using Godot;
 
 namespace PlanetLab;
 
-// P-001 planet: a static body whose attraction boundary is an independent shape.
-// [Tool] draws the same boundaries and real gravity samples in the 2D editor so
-// designers can see where the planet pulls and in which direction. The preview
-// never creates nodes or colliders and never changes scene properties.
+// 中文：P-001 星球。吸引边界是独立 Shape，实体碰撞是子节点 CollisionShape2D；
+// [Tool] 在 2D 编辑器画出吸引边界、影响范围与真实 GravityAt 方向采样，且不创建节点/碰撞。
+// 中文：策划优先改 GravityLayer / GravityStrength / InfluenceRange / AttractionGeometry；
+// 实体外观由碰撞 Shape 决定，不要把星球节点缩放当作尺寸配置。
 [Tool]
 public partial class Planet : StaticBody2D, IGravitySource
 {
@@ -18,27 +18,25 @@ public partial class Planet : StaticBody2D, IGravitySource
     private bool _showInfluence = true;
     private bool _showDirectionArrows = true;
 
-    // Editor-only bookkeeping: refresh the preview when the attraction resource or
-    // the collision shape child changes, without redrawing every editor frame.
-    private Shape2D? _watchedAttraction;
+    [ExportGroup("使用说明（只读）")]
+    [Export(PropertyHint.MultilineText)]
+    public string UsageNote { get; set; } =
+        "常用：GravityLayer 优先级（0 最高）；GravityStrength 单位 px/s²；InfluenceRange 是吸引轮廓外再延伸的有效距离（px）。\n" +
+        "AttractionGeometry 是重力参考轮廓（球/胶囊），不是实体碰撞；实体由子节点 CollisionShape2D 决定。\n" +
+        "用 Shape 尺寸改范围，不要缩放节点；方向箭头显示实际采样方向。";
+
+
+    // 中文：编辑器低频轮询用的缓存；不订阅 Shape.Changed，避免重复连接/替换资源时断连。
+    private Shape2D? _polledAttraction;
+    private float _polledAttractionRadius;
+    private float _polledAttractionHeight;
     private Shape2D? _polledSolidShape;
     private Transform2D _polledSolidTransform = Transform2D.Identity;
     private float _polledSolidRadius;
     private float _polledSolidHeight;
     private float _pollTimer;
 
-    [ExportGroup("Identity / Priority")]
-    [Export]
-    public string DisplayName
-    {
-        get => _displayName;
-        set
-        {
-            _displayName = value ?? string.Empty;
-            QueueRedraw();
-        }
-    }
-
+    [ExportGroup("① 常用玩法（优先调整）")]
     [Export(PropertyHint.Range, "0,32,1")]
     public int GravityLayer
     {
@@ -50,7 +48,7 @@ public partial class Planet : StaticBody2D, IGravitySource
         }
     }
 
-    [ExportGroup("Attraction")]
+    [ExportSubgroup("吸引与范围")]
     [Export]
     public Shape2D AttractionGeometry
     {
@@ -58,7 +56,6 @@ public partial class Planet : StaticBody2D, IGravitySource
         set
         {
             _attractionGeometry = value;
-            WatchAttractionShape(value);
             QueueRedraw();
         }
     }
@@ -86,7 +83,19 @@ public partial class Planet : StaticBody2D, IGravitySource
         }
     }
 
-    [ExportGroup("Appearance")]
+    [ExportGroup("② 标识与显示")]
+    [Export]
+    public string DisplayName
+    {
+        get => _displayName;
+        set
+        {
+            _displayName = value ?? string.Empty;
+            QueueRedraw();
+        }
+    }
+
+    [ExportGroup("③ 外观 / 调试（次要）")]
     [Export]
     public Color BodyColor
     {
@@ -129,18 +138,9 @@ public partial class Planet : StaticBody2D, IGravitySource
     public override void _EnterTree()
     {
         if (Engine.IsEditorHint())
-        {
-            WatchAttractionShape(AttractionGeometry);
             return;
-        }
         AddToGroup("planets");
         AddToGroup("gravity_sources");
-    }
-
-    public override void _ExitTree()
-    {
-        if (Engine.IsEditorHint())
-            WatchAttractionShape(null);
     }
 
     public override void _Notification(int what)
@@ -172,9 +172,17 @@ public partial class Planet : StaticBody2D, IGravitySource
         _pollTimer -= (float)delta;
         if (_pollTimer > 0) return;
         _pollTimer = 0.2f;
+        PollAttractionShape();
         PollEditorSolidShape();
     }
 
+    public override void _ValidateProperty(Godot.Collections.Dictionary property)
+    {
+        // 中文：策划说明只读，且不进入场景序列化。
+        EditorHelp.MakeReadOnly(property, nameof(UsageNote));
+    }
+
+    // 中文：判断玩家位置是否在“吸引轮廓 + InfluenceRange”内；范围外没有重力。
     public bool TryGetGravity(Vector2 worldPosition, out Vector2 gravity)
     {
         if (AttractionGeometry is null)
@@ -193,12 +201,14 @@ public partial class Planet : StaticBody2D, IGravitySource
         return true;
     }
 
+    // 中文：把世界坐标转到吸引形状局部，取最近边界点、外法线和有符号距离。
     public SurfaceSample Sample(Vector2 worldPosition)
     {
         SurfaceSample local = SurfaceGeometry.Sample(AttractionGeometry, ToLocal(worldPosition));
         return new SurfaceSample(ToGlobal(local.Point), local.Normal.Rotated(GlobalRotation), local.SignedDistance);
     }
 
+    // 中文：重力方向指向最近边界（边界处指向内部）；大小由 GravityStrength 决定。
     public Vector2 GravityAt(Vector2 worldPosition)
     {
         SurfaceSample sample = Sample(worldPosition);
@@ -212,8 +222,8 @@ public partial class Planet : StaticBody2D, IGravitySource
     {
         bool editor = Engine.IsEditorHint();
 
-        // The solid body is drawn from the collision child so the editor shows the
-        // actual terrain silhouette. A missing child or empty shape is a safe skip.
+        // 中文：实体轮廓取真实 CollisionShape2D 子节点；吸引边界取 AttractionGeometry；
+        // 两者可以不同，但同一个星球不应把节点缩放当作尺寸配置。
         CollisionShape2D? solidNode = GetNodeOrNull<CollisionShape2D>("CollisionShape2D");
         Shape2D? solid = solidNode?.Shape;
         if (solid is not null && TryOutline(solid, 0, out Vector2[] solidPoints))
@@ -365,29 +375,30 @@ public partial class Planet : StaticBody2D, IGravitySource
             modulate: color);
     }
 
-    private void WatchAttractionShape(Shape2D? shape)
+    // 中文：编辑器低频轮询吸引 Shape 的半径/高度；改 Inspector 或换资源后刷新预览。
+    private void PollAttractionShape()
     {
-        if (!Engine.IsEditorHint()) return;
-        if (ReferenceEquals(shape, _watchedAttraction)) return;
+        Shape2D? shape = AttractionGeometry;
+        float radius = shape switch
+        {
+            CircleShape2D circle => circle.Radius,
+            CapsuleShape2D capsule => capsule.Radius,
+            _ => 0
+        };
+        float height = shape is CapsuleShape2D capsuleShape ? capsuleShape.Height : 0;
+        bool changed = !ReferenceEquals(shape, _polledAttraction)
+            || !Mathf.IsEqualApprox(radius, _polledAttractionRadius)
+            || !Mathf.IsEqualApprox(height, _polledAttractionHeight);
+        if (!changed) return;
 
-        Shape2D? previous = _watchedAttraction;
-        if (previous is not null && GodotObject.IsInstanceValid(previous))
-            previous.Changed -= OnWatchedShapeChanged;
-
-        _watchedAttraction = shape;
-        if (shape is not null)
-            shape.Changed += OnWatchedShapeChanged;
-    }
-
-    private void OnWatchedShapeChanged()
-    {
+        _polledAttraction = shape;
+        _polledAttractionRadius = radius;
+        _polledAttractionHeight = height;
         QueueRedraw();
     }
 
-    // The planet's own AttractionGeometry signal covers the common case where the
-    // CollisionShape2D shares the same sub-resource. This low-frequency poll is a
-    // fallback for a separate solid shape, a swapped child shape or an offset
-    // collision child; it only redraws when something actually changed.
+    // 中文：轮询真实 CollisionShape2D 子节点的 Shape 与变换；
+    // 覆盖单独实体 Shape、替换子 Shape、偏移碰撞子节点等情况，只在变化时重绘。
     private void PollEditorSolidShape()
     {
         CollisionShape2D? solidNode = GetNodeOrNull<CollisionShape2D>("CollisionShape2D");

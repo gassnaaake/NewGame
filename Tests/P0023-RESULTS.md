@@ -1,6 +1,37 @@
 # P-002.3 实际验证记录
 
-日期：2026-10-22。环境：Windows、Godot **4.7.2-stable mono official**、.NET SDK 10.0.100（目标 net8.0）、Godot AI 4.3.0。代码基线：工作区 HEAD `cfac47e` + 本轮未提交修改。本文只记录实际执行过的检查；用户试玩验收另行进行。
+日期：2026-10-22（原始 P-002.3 验证）；2026-10-23 补充编辑器易用性修正。环境：Windows、Godot **4.7.2-stable mono official**、.NET SDK 10.0.100（目标 net8.0）、Godot AI 4.3.0。原始代码基线：工作区 HEAD `cfac47e` + 当轮未提交修改；2026-10-23 基线为用户提交 `2b03179` + 当轮编辑器修正修改。本文只记录实际执行过的检查；用户试玩/编辑器验收另行进行。
+
+> **2026-10-23 后续结果**：中文 Inspector 说明与平台真实子碰撞修正后，Godot 4.7.2 下 120/30 各 **354 项**通过（P-002.2/P-001 299 + P-002.3 55）；平台 Shape 在编辑器中改为 440 宽后运行时碰撞命中，已恢复 400。详见下方“0. 2026-10-23 编辑器易用性修正”。下方 339/46 记录保留为当轮历史结果。
+
+## 0. 2026-10-23 编辑器易用性修正（当前结果）
+
+实际命令：
+
+```powershell
+dotnet build NewGame.csproj -p:UseSharedCompilation=false
+powershell -NoProfile -ExecutionPolicy Bypass -File .\Tests\Run-P0023.ps1 -RenderFps 120
+powershell -NoProfile -ExecutionPolicy Bypass -File .\Tests\Run-P0023.ps1 -RenderFps 30
+```
+
+- 构建成功，0 警告、0 错误；120/30 各 **354 项**通过：
+
+| 组 | 数量 |
+|---|---:|
+| P-001 运动/跳跃/发射/旅行 | 104 |
+| 落地/切向/连续朝向 | 68 |
+| 下砸 | 14 |
+| 平台碰撞/破坏/穿越 + 子碰撞/中文说明元数据 | 26 |
+| GravityLayer/固定区域/零重力/角色/摄像机 | 73 |
+| P-002 路线 | 14 |
+| P-002.3 GravityPlayground | 55 |
+
+- 日志：`.godot/test-results/p0023-editor-final-{120,30}-console.log`、`p0022-*-{120,30}.log`、`p0023-playground-{120,30}.log`；`^ERROR:|^FAIL` 无匹配。
+- **平台迁移**：`GravityPlayground` 的 11 个平台、`GravityLab` 的 `Deck`、`RouteLab` 的 5 个平台都使用真实 `CollisionShape2D` 子节点；平台节点不再有 `Size`。用户未提交的 Sphere 吸引半径 `138.84` 保留。
+- **编辑器→运行时碰撞验证**：`StartDeck` 的 Shape 初始 `(400,16)`；在编辑器改为 `(440,16)` 并保存后运行，游戏内 Shape 读回 `(440,16)`，在旧范围外 `(-1710,-380)` 的物理查询命中 `StartDeck` 1 次；停止后恢复 `(400,16)` 并保存。场景最终值为 400。
+- **中文说明验证**：`PlatformTests` 与 `PlaygroundTests` 通过 `GetPropertyList()` 断言四个组件都有 `UsageNote`、`ReadOnly` 存在、`Storage` 不存在，并检查中文玩法分组；`UsageNote` 不写入 `.tscn`。MCP 不能截取 Inspector dock，实际排版/字体/阅读体验仍需用户验收。
+- **编辑器截图**：`.godot/test-results/p0023-editor-collision.png`、`p0023-editor-gravitylab-deck.png`、`p0023-editor-sphere.png`、`p0023-editor-platform-tree.png`、`p0023-editor-scene-tree.png`；能看到平台 → `CollisionShape2D` 的 Scene 树（截图布局较窄，平台名被截断，但层级与子节点可见）。
+- 用户已在 P-002.3 整体试玩中反馈“相比之前有改善”；本次编辑器修正**尚未由用户操作验收**，不能把自动化/截图当作编辑器验收。
 
 ## 1. 环境与构建
 
@@ -133,7 +164,9 @@ LANDING sphere f=40 x=-1500.00 y=-92.032 v=(0, 0) n=(0.00, -1.00) outward=0.000 
 - `.godot/test-results/p0023-feather.png`
 - `.godot/test-results/p0023-gravity300.png`（运行时把 START 区强度改为 300 的 HUD 证据）
 
-## 6. 本轮结论与未验证
+## 6. 本轮结论与未验证（2026-10-22 历史）
+
+> 本节是 2026-10-22 当轮结论，保留为历史。2026-10-23 当前结果见第 0 节（354 项）；用户之后已试玩 P-002.3 整体路线并反馈改善，但本轮编辑器修正仍待用户操作验收。
 
 已实际确认：
 

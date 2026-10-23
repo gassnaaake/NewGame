@@ -9,7 +9,7 @@
 [ext_resource type="Script" uid="uid://8f38w3ikixvm" path="res://Scripts/GoalZone.cs" id="5_nxwq2"]
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_s4qht"]
-radius = 180.0
+radius = 138.84
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_oo7fr"]
 radius = 180.0
@@ -21,6 +21,39 @@ height = 560.0
 [sub_resource type="CapsuleShape2D" id="CapsuleShape2D_kt10y"]
 radius = 130.0
 height = 560.0
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_xblky"]
+size = Vector2(400, 16)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_nxwq2"]
+size = Vector2(160, 14)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_ij4e3"]
+size = Vector2(150, 14)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_s4qht"]
+size = Vector2(160, 14)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_oo7fr"]
+size = Vector2(160, 14)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_jw5fw"]
+size = Vector2(460, 14)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_kt10y"]
+size = Vector2(300, 14)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_ey0vi"]
+size = Vector2(220, 14)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_1d7a0"]
+size = Vector2(220, 14)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_mhlw3"]
+size = Vector2(160, 14)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_g3mys"]
+size = Vector2(180, 14)
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_ey0vi"]
 radius = 12.0
@@ -36,10 +69,10 @@ HudTitle = "GRAVITY PLAYGROUND / P-002.3"
 [node name="Sphere" type="StaticBody2D" parent="World/Planets" unique_id=1569411577]
 position = Vector2(-1500, 100)
 script = ExtResource("1_t8sce")
-DisplayName = "Sphere · start planet"
 GravityLayer = 2
 AttractionGeometry = SubResource("CircleShape2D_s4qht")
 InfluenceRange = 450.0
+DisplayName = "Sphere · start planet"
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="World/Planets/Sphere" unique_id=2088050554]
 shape = SubResource("CircleShape2D_oo7fr")
@@ -48,9 +81,9 @@ shape = SubResource("CircleShape2D_oo7fr")
 position = Vector2(1500, 1200)
 rotation = 1.5707963
 script = ExtResource("1_t8sce")
-DisplayName = "Capsule · goal planet"
 AttractionGeometry = SubResource("CapsuleShape2D_jw5fw")
 InfluenceRange = 240.0
+DisplayName = "Capsule · goal planet"
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="World/Planets/Capsule" unique_id=698929580]
 shape = SubResource("CapsuleShape2D_kt10y")
@@ -60,62 +93,62 @@ shape = SubResource("CapsuleShape2D_kt10y")
 [node name="StartFlat_L0" type="Node2D" parent="World/GravityZones" unique_id=1013246282]
 position = Vector2(-1380, -450)
 script = ExtResource("2_iav4s")
-DisplayName = "START / L0 FLAT DOWN"
 Size = Vector2(1220, 520)
+DisplayName = "START / L0 FLAT DOWN"
 
 [node name="FloatZone_L1" type="Node2D" parent="World/GravityZones" unique_id=146339766]
 position = Vector2(-650, -480)
 script = ExtResource("2_iav4s")
-DisplayName = "FLOAT ZONE / L1 WEAK 260"
 GravityLayer = 1
 Size = Vector2(640, 640)
 GravityStrength = 260.0
+DisplayName = "FLOAT ZONE / L1 WEAK 260"
 RegionColor = Color(0.43529412, 0.7137255, 1, 1)
 
 [node name="Island_L0" type="Node2D" parent="World/GravityZones" unique_id=1928178944]
 position = Vector2(-400, -600)
 script = ExtResource("2_iav4s")
-DisplayName = "ISLAND / L0 OVERRIDES L1"
 Size = Vector2(300, 440)
+DisplayName = "ISLAND / L0 OVERRIDES L1"
 RegionColor = Color(0.49411765, 0.9411765, 0.73333335, 1)
 
 [node name="Feather_L0" type="Node2D" parent="World/GravityZones" unique_id=1991060289]
 position = Vector2(1680, 1000)
 script = ExtResource("2_iav4s")
-DisplayName = "FEATHER / L0 g=40"
 Size = Vector2(260, 380)
 GravityStrength = 40.0
+DisplayName = "FEATHER / L0 g=40"
 RegionColor = Color(0.8509804, 0.72156864, 1, 1)
 
 [node name="SumDown_L0" type="Node2D" parent="World/GravityZones" unique_id=1839936168]
 position = Vector2(-10, -560)
 script = ExtResource("2_iav4s")
-DisplayName = "SUM: DOWN 550"
 Size = Vector2(480, 640)
+DisplayName = "SUM: DOWN 550"
 RegionColor = Color(0.47058824, 0.8392157, 0.7529412, 1)
 
 [node name="SumRight_L0" type="Node2D" parent="World/GravityZones" unique_id=673310060]
 position = Vector2(110, -560)
 script = ExtResource("2_iav4s")
-DisplayName = "SUM: RIGHT 300"
 Size = Vector2(240, 480)
 Direction = Vector2(1, 0)
 GravityStrength = 300.0
+DisplayName = "SUM: RIGHT 300"
 RegionColor = Color(1, 0.6431373, 0.36862746, 1)
 
 [node name="Bridge_L0" type="Node2D" parent="World/GravityZones" unique_id=319273351]
 position = Vector2(415, -530)
 script = ExtResource("2_iav4s")
-DisplayName = "BRIDGE / L0 FLAT"
 Size = Vector2(370, 620)
+DisplayName = "BRIDGE / L0 FLAT"
 RegionColor = Color(0.54509807, 0.8784314, 0.7529412, 1)
 
 [node name="Launch_L0" type="Node2D" parent="World/GravityZones" unique_id=506880665]
 position = Vector2(820, -600)
 script = ExtResource("2_iav4s")
-DisplayName = "LAUNCH / L0 TILTED 15°"
 Size = Vector2(440, 600)
 Direction = Vector2(0.258819, 0.965926)
+DisplayName = "LAUNCH / L0 TILTED 15°"
 RegionColor = Color(1, 0.7019608, 0.75686276, 1)
 
 [node name="Terrain" type="Node2D" parent="World" unique_id=2041453896]
@@ -123,71 +156,93 @@ RegionColor = Color(1, 0.7019608, 0.75686276, 1)
 [node name="StartDeck" type="StaticBody2D" parent="World/Terrain" unique_id=1323356667]
 position = Vector2(-1500, -380)
 script = ExtResource("3_xblky")
-Size = Vector2(400, 16)
 Caption = "START DECK"
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="World/Terrain/StartDeck" unique_id=1302902154]
+shape = SubResource("RectangleShape2D_xblky")
 
 [node name="Step1" type="StaticBody2D" parent="World/Terrain" unique_id=435190237]
 position = Vector2(-1120, -421)
 script = ExtResource("3_xblky")
-Size = Vector2(160, 14)
 Caption = "STEP 1"
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="World/Terrain/Step1" unique_id=116368377]
+shape = SubResource("RectangleShape2D_nxwq2")
 
 [node name="Step2" type="StaticBody2D" parent="World/Terrain" unique_id=1692831610]
 position = Vector2(-920, -461)
 script = ExtResource("3_xblky")
-Size = Vector2(150, 14)
 Caption = "STEP 2"
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="World/Terrain/Step2" unique_id=107749616]
+shape = SubResource("RectangleShape2D_ij4e3")
 
 [node name="FloatDeck" type="StaticBody2D" parent="World/Terrain" unique_id=1709893975]
 position = Vector2(-680, -501)
 script = ExtResource("3_xblky")
-Size = Vector2(160, 14)
 Caption = "FLOAT L1"
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="World/Terrain/FloatDeck" unique_id=84557993]
+shape = SubResource("RectangleShape2D_s4qht")
 
 [node name="IslandDeck" type="StaticBody2D" parent="World/Terrain" unique_id=2107426418]
 position = Vector2(-400, -541)
 script = ExtResource("3_xblky")
-Size = Vector2(160, 14)
 Caption = "L0 ISLAND"
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="World/Terrain/IslandDeck" unique_id=225702868]
+shape = SubResource("RectangleShape2D_oo7fr")
 
 [node name="SumDeck" type="StaticBody2D" parent="World/Terrain" unique_id=785062776]
 position = Vector2(0, -581)
 script = ExtResource("3_xblky")
-Size = Vector2(460, 14)
 Caption = "SUM: DOWN + RIGHT"
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="World/Terrain/SumDeck" unique_id=138220810]
+shape = SubResource("RectangleShape2D_jw5fw")
 
 [node name="BridgeDeck" type="StaticBody2D" parent="World/Terrain" unique_id=2064127752]
 position = Vector2(410, -601)
 script = ExtResource("3_xblky")
-Size = Vector2(300, 14)
 Caption = "BRIDGE"
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="World/Terrain/BridgeDeck" unique_id=114158163]
+shape = SubResource("RectangleShape2D_kt10y")
 
 [node name="LaunchDeck" type="StaticBody2D" parent="World/Terrain" unique_id=239680938]
 position = Vector2(680, -601)
 script = ExtResource("3_xblky")
-Size = Vector2(220, 14)
 Caption = "LAUNCH DECK"
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="World/Terrain/LaunchDeck" unique_id=579036444]
+shape = SubResource("RectangleShape2D_ey0vi")
 
 [node name="LaunchRamp" type="StaticBody2D" parent="World/Terrain" unique_id=1507935830]
 position = Vector2(898, -630)
 rotation = -0.2617994
 script = ExtResource("3_xblky")
 Kind = 2
-Size = Vector2(220, 14)
 Caption = "JUMP + J"
 ShowTakeoffMarker = true
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="World/Terrain/LaunchRamp" unique_id=619958576]
+shape = SubResource("RectangleShape2D_1d7a0")
 
 [node name="FeatherPad" type="StaticBody2D" parent="World/Terrain" unique_id=1523380860]
 position = Vector2(1680, 1050)
 script = ExtResource("3_xblky")
-Size = Vector2(160, 14)
 Caption = "FEATHER PAD"
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="World/Terrain/FeatherPad" unique_id=1709382058]
+shape = SubResource("RectangleShape2D_mhlw3")
 
 [node name="FeatherCeiling" type="StaticBody2D" parent="World/Terrain" unique_id=656731462]
 position = Vector2(1680, 815)
 script = ExtResource("3_xblky")
-Size = Vector2(180, 14)
 Caption = "FEATHER CEILING"
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="World/Terrain/FeatherCeiling" unique_id=46353330]
+shape = SubResource("RectangleShape2D_g3mys")
 
 [node name="Gameplay" type="Node2D" parent="." unique_id=588451031]
 

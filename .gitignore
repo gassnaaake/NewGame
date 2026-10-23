@@ -1,3 +1,10 @@
 # Godot 4+ specific ignores
 .godot/
 /android/
+
+# Local IDE and machine-specific settings (do not commit another developer's editor state)
+.idea/
+.vs/
+
+# Local pre-migration project backup
+NewGame.csproj.old
